@@ -11,6 +11,7 @@ import { deobfuscateText } from '../magic-identifier'
 import type { EntryKey } from './entry-key'
 import * as Log from '../../../build/output/log'
 import type { NextConfigComplete } from '../../../server/config-shared'
+import { codeFrameColumns } from '../errors/code-frame'
 
 type IssueKey = `${Issue['severity']}-${Issue['filePath']}-${string}-${string}`
 export type IssuesMap = Map<IssueKey, Issue>
@@ -134,9 +135,8 @@ export function formatIssue(issue: Issue) {
     !isInternal(filePath)
   ) {
     const { start, end } = source.range
-    const { codeFrameColumns } =
-      require('next/dist/compiled/babel/code-frame') as typeof import('next/dist/compiled/babel/code-frame')
 
+    // TODO(lukesandberg): move codeFrame formatting into turbopack, it would be more efficient than passing the source back and forth
     message +=
       codeFrameColumns(
         source.source.content,
@@ -150,8 +150,8 @@ export function formatIssue(issue: Issue) {
             column: end.column + 1,
           },
         },
-        { forceColor: true }
-      ).trim() + '\n\n'
+        { color: true }
+      ).trimEnd() + '\n\n'
   }
 
   if (description) {
