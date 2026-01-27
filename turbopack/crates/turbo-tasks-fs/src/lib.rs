@@ -906,6 +906,7 @@ impl FileSystem for DiskFileSystem {
         let inner = self.inner.clone();
         let invalidator = turbo_tasks::get_invalidator();
 
+        #[derive(TraceRawVcs, NonLocalValue)]
         struct WriteEffect {
             full_path: PathBuf,
             inner: Arc<DiskFileSystemInner>,
@@ -916,7 +917,7 @@ impl FileSystem for DiskFileSystem {
         impl Effect for WriteEffect {
             type Error = AnyhowWrapper;
 
-            async fn apply(self) -> Result<(), Self::Error> {
+            async fn apply(&self) -> Result<(), Self::Error> {
                 let full_path = validate_path_length(&self.full_path)?;
 
                 let _lock = self.inner.lock_path(&full_path).await;
@@ -1061,6 +1062,7 @@ impl FileSystem for DiskFileSystem {
         let inner = self.inner.clone();
         let invalidator = turbo_tasks::get_invalidator();
 
+        #[derive(TraceRawVcs, NonLocalValue)]
         struct WriteLinkEffect {
             full_path: PathBuf,
             inner: Arc<DiskFileSystemInner>,
@@ -1071,7 +1073,7 @@ impl FileSystem for DiskFileSystem {
         impl Effect for WriteLinkEffect {
             type Error = AnyhowWrapper;
 
-            async fn apply(self) -> Result<(), Self::Error> {
+            async fn apply(&self) -> Result<(), Self::Error> {
                 let full_path = validate_path_length(&self.full_path)?;
 
                 let _lock = self.inner.lock_path(&full_path).await;
@@ -2790,6 +2792,7 @@ async fn realpath_with_links(path: FileSystemPath) -> Result<Vc<RealPathResult>>
 
 /// Wrapper to convert `anyhow::Error` to `impl std::error::Error` for use in `Effect::apply`.
 // TODO(bgw): use a structured error type instead of anyhow for write/write_link
+#[derive(TraceRawVcs, NonLocalValue)]
 struct AnyhowWrapper(anyhow::Error);
 
 impl std::fmt::Display for AnyhowWrapper {
