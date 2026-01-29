@@ -102,7 +102,7 @@ pub use crate::{
     collectibles::CollectiblesSource,
     completion::{Completion, Completions},
     display::ValueToString,
-    effect::{ApplyEffectsContext, Effect, Effects, apply_effects, effect, get_effects},
+    effect::{ApplyEffectsContext, Effect, Effects, apply_effects, emit_effect, get_effects},
     id::{ExecutionId, LocalTaskId, TRANSIENT_TASK_BIT, TaskId, TraitTypeId, ValueTypeId},
     invalidation::{
         InvalidationReason, InvalidationReasonKind, InvalidationReasonSet, Invalidator,
