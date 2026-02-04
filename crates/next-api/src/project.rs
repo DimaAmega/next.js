@@ -609,7 +609,22 @@ impl ProjectContainer {
     }
 
     #[tracing::instrument(level = "info", name = "update project options", skip_all)]
-    pub async fn update(self: Vc<Self>, options: PartialProjectOptions) -> Result<()> {
+    pub async fn update(self: ResolvedVc<Self>, options: PartialProjectOptions) -> Result<()> {
+        // HACK: `update` is called from a top-level function. Top-level functions are not allowed
+        // to perform eventually consistent reads. Create a stub operation to upgrade the
+        // `ResolvedVc` to an `OperationVc`. This is mostly okay because we can assume the
+        // `ProjectContainer` was originally resolved with strong consistency, and is rarely
+        // updated.
+        #[turbo_tasks::function(operation)]
+        fn project_container_operation_hack(
+            container: ResolvedVc<ProjectContainer>,
+        ) -> Vc<ProjectContainer> {
+            *container
+        }
+        let this = project_container_operation_hack(self)
+            .read_strongly_consistent()
+            .await?;
+
         let PartialProjectOptions {
             root_path,
             project_path,
@@ -626,9 +641,6 @@ impl ProjectContainer {
             write_routes_hashes_manifest,
             debug_build_paths,
         } = options;
-
-        let resolved_self = self.to_resolved().await?;
-        let this = resolved_self.await?;
 
         let mut new_options = this
             .options_state
@@ -682,7 +694,7 @@ impl ProjectContainer {
         // TODO: Handle mode switch, should prevent mode being switched.
         let watch = new_options.watch;
 
-        let project = project_operation(resolved_self)
+        let project = project_operation(self)
             .resolve_strongly_consistent()
             .await?;
         let prev_project_fs = project_fs_operation(project)
@@ -693,7 +705,7 @@ impl ProjectContainer {
             .await?;
 
         this.options_state.set(Some(new_options));
-        let project = project_operation(resolved_self)
+        let project = project_operation(self)
             .resolve_strongly_consistent()
             .await?;
         let project_fs = project_fs_operation(project)
