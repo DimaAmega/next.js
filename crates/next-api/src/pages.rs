@@ -67,6 +67,7 @@ use turbopack_nodejs::NodeJsChunkingContext;
 use turbopack_resolve::{ecmascript::esm_resolve, resolve_options_context::ResolveOptionsContext};
 
 use crate::{
+    asset_hashes_manifest::AssetHashesManifestAsset,
     dynamic_imports::{
         DynamicImportedChunks, NextDynamicChunkAvailability, collect_next_dynamic_chunks,
     },
@@ -1622,6 +1623,20 @@ impl Endpoint for PageEndpoint {
                     algorithm,
                 );
                 output_assets.concat_asset(sri_manifest)
+            } else {
+                output_assets
+            };
+
+            let output_assets: Vc<OutputAssets> = if *project.emit_server_side_hashes().await? {
+                let hashes_manifest = Vc::upcast(AssetHashesManifestAsset::new(
+                    node_root.join(&format!(
+                        "server/pages{}/server-hashes.json",
+                        get_asset_prefix_from_pathname(&this.pathname)
+                    ))?,
+                    all_asset_paths(output_assets, node_root.clone(), None),
+                    None,
+                ));
+                output_assets.concat_asset(hashes_manifest)
             } else {
                 output_assets
             };

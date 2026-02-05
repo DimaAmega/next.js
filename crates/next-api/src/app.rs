@@ -74,6 +74,7 @@ use turbopack_ecmascript::single_file_ecmascript_output::SingleFileEcmascriptOut
 use turbopack_resolve::{ecmascript::cjs_resolve, resolve_options_context::ResolveOptionsContext};
 
 use crate::{
+    asset_hashes_manifest::AssetHashesManifestAsset,
     dynamic_imports::{NextDynamicChunkAvailability, collect_next_dynamic_chunks},
     font::FontManifest,
     loadable_manifest::create_react_loadable_manifest,
@@ -2041,10 +2042,25 @@ impl Endpoint for AppEndpoint {
                 output_assets
             };
 
+            let output_assets: Vc<OutputAssets> = if *project.emit_server_side_hashes().await? {
+                let hashes_manifest = Vc::upcast(AssetHashesManifestAsset::new(
+                    node_root.join(&format!(
+                        "server/app{}/server-hashes.json",
+                        &self.app_endpoint_entry().await?.original_name
+                    ))?,
+                    all_asset_paths(output_assets, node_root.clone(), None),
+                    None,
+                ));
+                output_assets.concat_asset(hashes_manifest)
+            } else {
+                output_assets
+            };
+
             let (server_paths, client_paths) = if project.next_mode().await?.is_development() {
                 let server_paths = all_asset_paths(output_assets, node_root.clone(), None)
                     .owned()
                     .await?;
+                let client_relative_root = project.client_relative_path().owned().await?;
                 let client_paths = all_paths_in_root(output_assets, client_relative_root)
                     .owned()
                     .await?;
