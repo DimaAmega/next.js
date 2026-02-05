@@ -111,25 +111,30 @@ impl Asset for ServerNftJsonAsset {
                 .await?
                 .iter()
                 .map(async |m| {
-                    base_dir
-                        .get_relative_path_to(&*m.path().await?)
-                        .context("failed to compute relative path for server NFT JSON")
+                    Ok((
+                        base_dir
+                            .get_relative_path_to(&*m.path().await?)
+                            .context("failed to compute relative path for server NFT JSON")?,
+                        *m.content().hash().await?,
+                    ))
                 })
                 .try_join()
                 .await?;
 
         // A few hardcoded files (not recursive)
-        server_output_assets.push("./package.json".into());
+        // TODO hash
+        server_output_assets.push(("./package.json".into(), 0));
 
         let next_dir = get_next_package(this.project.project_path().owned().await?).await?;
         for ty in ["app-page", "pages"] {
             let dir = next_dir.join(&format!("dist/server/route-modules/{ty}"))?;
             let module_path = dir.join("module.compiled.js")?;
-            server_output_assets.push(
+            server_output_assets.push((
                 base_dir
                     .get_relative_path_to(&module_path)
                     .context("failed to compute relative path for server NFT JSON")?,
-            );
+                *module_path.read().hash().await?,
+            ));
 
             let contexts_dir = dir.join("vendored/contexts")?;
             let DirectoryContent::Entries(contexts_files) = &*contexts_dir.read_dir().await? else {
@@ -143,11 +148,12 @@ impl Asset for ServerNftJsonAsset {
                     continue;
                 };
                 if file.extension() == "js" {
-                    server_output_assets.push(
+                    server_output_assets.push((
                         base_dir
                             .get_relative_path_to(file)
                             .context("failed to compute relative path for server NFT JSON")?,
-                    )
+                        *file.read().hash().await?,
+                    ))
                 }
             }
         }
@@ -159,7 +165,7 @@ impl Asset for ServerNftJsonAsset {
         server_output_assets.dedup();
 
         let json = json!({
-          "version": 1,
+          "version": 2,
           "files": server_output_assets
         });
 

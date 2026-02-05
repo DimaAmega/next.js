@@ -1,4 +1,4 @@
-use std::collections::{BTreeSet, HashSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, HashSet, VecDeque};
 
 use anyhow::{Result, bail};
 use serde_json::json;
@@ -104,14 +104,14 @@ async fn apply_includes(
     project_root_path: FileSystemPath,
     glob: Vc<Glob>,
     ident_folder: &FileSystemPath,
-) -> Result<BTreeSet<RcStr>> {
+) -> Result<BTreeMap<RcStr, u64>> {
     debug_assert_eq!(project_root_path.fs, ident_folder.fs);
     // Read files matching the glob pattern from the project root
     // This result itself has random order, but the BTreeSet will ensure a deterministic ordering.
     let glob_result = project_root_path.read_glob(glob).await?;
 
     // Walk the full glob_result using an explicit stack to avoid async recursion overheads.
-    let mut result = BTreeSet::new();
+    let mut result = BTreeMap::new();
     let mut stack = VecDeque::new();
     stack.push_back(glob_result);
     while let Some(glob_result) = stack.pop_back() {
@@ -126,7 +126,7 @@ async fn apply_includes(
             // unwrap is safe because project_root_path and ident_folder have the same filesystem
             // and paths produced by read_glob stay in the filesystem
             let relative_path = ident_folder.get_relative_path_to(file_path).unwrap();
-            result.insert(relative_path);
+            result.insert(relative_path, *file_path.read().hash().await?);
         }
 
         for nested_result in glob_result.inner.values() {
@@ -147,7 +147,7 @@ impl Asset for NftJsonAsset {
             path = display(self.path().to_string().await?)
         );
         async move {
-            let mut result: BTreeSet<RcStr> = BTreeSet::new();
+            let mut result: BTreeMap<RcStr, u64> = BTreeMap::new();
             let project_path = this.project.project_path().owned().await?;
 
             let output_root_ref = this.project.output_fs().root().await?;
@@ -316,7 +316,7 @@ impl Asset for NftJsonAsset {
                     }
                 };
 
-                result.insert(specifier);
+                result.insert(specifier, *referenced_chunk.content().hash().await?);
             }
 
             // Apply outputFileTracingIncludes and outputFileTracingExcludes
@@ -368,7 +368,7 @@ impl Asset for NftJsonAsset {
             }
 
             let json = json!({
-              "version": 1,
+              "version": 2,
               "files": result
             });
 
