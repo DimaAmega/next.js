@@ -204,7 +204,12 @@ export const CALL_STACK_FRAME_STYLES = `
     }
 
     &:hover {
-      background: var(--color-gray-100);
+      /* 
+       * if we're hovering the secondary actions, we're also hovering the parent.
+       * Invert back to create sufficient contrast against the parent's hover background color.
+       */
+      background: var(--color-background-100);
+      outline: 1px solid var(--color-font);
     }
   }
 
