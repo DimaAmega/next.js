@@ -3,11 +3,52 @@ import {
   waitForRedbox,
   getStackFramesContent,
   toggleCollapseCallStackFrames,
+  getRedboxSource,
 } from 'next-test-utils'
 
 describe('error-ignored-frames', () => {
   const { isTurbopack, next } = nextTestSetup({
     files: __dirname,
+  })
+
+  it('should update codeframe when clicking on a different stack frame', async () => {
+    const browser = await next.browser('/interleaved')
+    await waitForRedbox(browser)
+
+    // Initially, the first non-ignored frame with codeframe should be selected
+    const initialSource = await getRedboxSource(browser)
+    expect(initialSource).toContain('app/interleaved/page.tsx')
+
+    // Get the initially selected frame to verify it changes
+    const initialSelectedFrame = await browser.elementByCss(
+      '[data-nextjs-call-stack-frame-selected="true"]'
+    )
+    const initialFrameText = await initialSelectedFrame.text()
+
+    // Get all selectable frames (frames with select buttons)
+    const selectableFrames = await browser.elementsByCss(
+      '[data-nextjs-call-stack-frame-selectable="true"]'
+    )
+    // Should have at least 2 selectable frames
+    expect(selectableFrames.length).toBeGreaterThanOrEqual(2)
+
+    // Click on a different selectable frame to change selection
+    // Using the select button which covers the whole frame area
+    const secondFrameButton = await browser.elementByCss(
+      '[data-nextjs-call-stack-frame-selectable="true"]:not([data-nextjs-call-stack-frame-selected="true"]) .call-stack-frame-select-button'
+    )
+    await secondFrameButton.click()
+
+    // The selected frame should have changed
+    const newSelectedFrame = await browser.elementByCss(
+      '[data-nextjs-call-stack-frame-selected="true"]'
+    )
+    const newFrameText = await newSelectedFrame.text()
+    expect(newFrameText).not.toBe(initialFrameText)
+
+    // The codeframe should still show content from the interleaved page
+    const newSource = await getRedboxSource(browser)
+    expect(newSource).toContain('app/interleaved/page.tsx')
   })
 
   it('should be able to collapse ignored frames in server component', async () => {

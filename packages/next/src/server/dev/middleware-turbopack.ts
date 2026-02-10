@@ -30,6 +30,10 @@ function shouldIgnorePath(modulePath: string): boolean {
     modulePath.includes('node_modules') ||
     // Only relevant for when Next.js is symlinked e.g. in the Next.js monorepo
     modulePath.includes('next/dist') ||
+    // Also ignore Next.js source files (in monorepo development)
+    modulePath.includes('next/src/') ||
+    // Handle monorepo workspace paths (e.g., packages/next/src/...)
+    modulePath.includes('packages/next/') ||
     modulePath.startsWith('node:')
   )
 }
@@ -85,14 +89,17 @@ async function batchedTraceSource(
   let source = null
   const originalFile = sourceFrame.originalFile
 
-  // Don't look up source for node_modules or internals. These can often be large bundled files.
   const ignored =
     // Check the sourcemap's ignoreList (e.g. from 3rd party packages)
     !!sourceFrame.isIgnored ||
     shouldIgnorePath(originalFile ?? sourceFrame.file) ||
     // isInternal means resource starts with turbopack:///[turbopack]
-    !!sourceFrame.isInternal
-  if (originalFile && !ignored) {
+    !!sourceFrame.isInternal ||
+    // If there's no useful source location, it's likely internal framework code
+    (!sourceFrame.line && !sourceFrame.column)
+
+  // Load source for all frames to support codeframe display for ignored frames too
+  if (originalFile) {
     let sourcePromise = currentSourcesByFile.get(originalFile)
     if (!sourcePromise) {
       sourcePromise = project.getSourceForAsset(originalFile)
@@ -250,10 +257,12 @@ async function nativeTraceSource(
           originalPosition.source!
         )
         ignored =
-          applicableSourceMap.ignoreList?.includes(sourceIndex) ??
-          // When sourcemap is not available, fallback to checking `frame.file`.
-          // e.g. In pages router, nextjs server code is not bundled into the page.
-          shouldIgnorePath(frame.file)
+          applicableSourceMap.ignoreList?.includes(sourceIndex) ||
+          // Also check shouldIgnorePath for the original source (e.g., Next.js internals
+          // in monorepo development that aren't in the sourcemap's ignoreList)
+          shouldIgnorePath(originalPosition.source ?? frame.file) ||
+          // If there's no useful source location, it's likely internal framework code
+          (originalPosition.line === null && originalPosition.column === null)
       }
 
       const originalStackFrame: IgnorableStackFrame = {

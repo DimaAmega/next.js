@@ -9,11 +9,15 @@ export function CallStack({
   isIgnoreListOpen,
   ignoredFramesTally,
   onToggleIgnoreList,
+  selectedFrameIndex,
+  onFrameSelect,
 }: {
   frames: readonly OriginalStackFrame[]
   isIgnoreListOpen: boolean
   ignoredFramesTally: number
   onToggleIgnoreList: () => void
+  selectedFrameIndex: number | null
+  onFrameSelect: (index: number) => void
 }) {
   return (
     <div data-nextjs-call-stack-container>
@@ -33,8 +37,15 @@ export function CallStack({
         )}
       </div>
       {frames.map((frame, frameIndex) => {
+        const hasCodeFrame = Boolean(frame.originalCodeFrame)
         return !frame.ignored || isIgnoreListOpen ? (
-          <CallStackFrame key={frameIndex} frame={frame} />
+          <CallStackFrame
+            key={frameIndex}
+            frame={frame}
+            index={frameIndex}
+            isSelected={selectedFrameIndex === frameIndex}
+            onSelect={hasCodeFrame ? onFrameSelect : undefined}
+          />
         ) : null
       })}
     </div>

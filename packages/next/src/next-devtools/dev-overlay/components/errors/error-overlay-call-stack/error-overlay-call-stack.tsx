@@ -1,18 +1,25 @@
 import type { OriginalStackFrame } from '../../../../shared/stack-frame'
-import { useMemo, useState, useRef } from 'react'
+import { useMemo, useRef } from 'react'
 import { CallStack } from '../../call-stack/call-stack'
 
 interface CallStackProps {
   frames: readonly OriginalStackFrame[]
   dialogResizerRef: React.RefObject<HTMLDivElement | null>
+  selectedFrameIndex: number | null
+  onFrameSelect: (index: number) => void
+  isIgnoreListOpen: boolean
+  setIsIgnoreListOpen: (open: boolean) => void
 }
 
 export function ErrorOverlayCallStack({
   frames,
   dialogResizerRef,
+  selectedFrameIndex,
+  onFrameSelect,
+  isIgnoreListOpen,
+  setIsIgnoreListOpen,
 }: CallStackProps) {
   const initialDialogHeight = useRef<number>(NaN)
-  const [isIgnoreListOpen, setIsIgnoreListOpen] = useState(false)
 
   const ignoredFramesTally = useMemo(() => {
     return frames.reduce((tally, frame) => tally + (frame.ignored ? 1 : 0), 0)
@@ -62,6 +69,8 @@ export function ErrorOverlayCallStack({
       isIgnoreListOpen={isIgnoreListOpen}
       onToggleIgnoreList={onToggleIgnoreList}
       ignoredFramesTally={ignoredFramesTally}
+      selectedFrameIndex={selectedFrameIndex}
+      onFrameSelect={onFrameSelect}
     />
   )
 }
