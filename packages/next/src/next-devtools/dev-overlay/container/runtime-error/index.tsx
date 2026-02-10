@@ -15,6 +15,8 @@ type RuntimeErrorProps = {
 
 export function RuntimeError({ error, dialogResizerRef }: RuntimeErrorProps) {
   const frames = useFrames(error)
+  // TODO: Select the nearest frame that's not ignore-listed when hiding ignore-listed
+  // frames.
   const [isIgnoreListOpen, setIsIgnoreListOpen] = useState(false)
 
   // Find all frames that have code frames (can be displayed)
