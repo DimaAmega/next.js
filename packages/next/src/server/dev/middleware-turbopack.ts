@@ -30,10 +30,6 @@ function shouldIgnorePath(modulePath: string): boolean {
     modulePath.includes('node_modules') ||
     // Only relevant for when Next.js is symlinked e.g. in the Next.js monorepo
     modulePath.includes('next/dist') ||
-    // Also ignore Next.js source files (in monorepo development)
-    modulePath.includes('next/src/') ||
-    // Handle monorepo workspace paths (e.g., packages/next/src/...)
-    modulePath.includes('packages/next/') ||
     modulePath.startsWith('node:')
   )
 }
@@ -94,9 +90,7 @@ async function batchedTraceSource(
     !!sourceFrame.isIgnored ||
     shouldIgnorePath(originalFile ?? sourceFrame.file) ||
     // isInternal means resource starts with turbopack:///[turbopack]
-    !!sourceFrame.isInternal ||
-    // If there's no useful source location, it's likely internal framework code
-    (!sourceFrame.line && !sourceFrame.column)
+    !!sourceFrame.isInternal
 
   // Load source for all frames to support codeframe display for ignored frames too
   if (originalFile) {
@@ -257,12 +251,10 @@ async function nativeTraceSource(
           originalPosition.source!
         )
         ignored =
-          applicableSourceMap.ignoreList?.includes(sourceIndex) ||
-          // Also check shouldIgnorePath for the original source (e.g., Next.js internals
-          // in monorepo development that aren't in the sourcemap's ignoreList)
-          shouldIgnorePath(originalPosition.source ?? frame.file) ||
-          // If there's no useful source location, it's likely internal framework code
-          (originalPosition.line === null && originalPosition.column === null)
+          applicableSourceMap.ignoreList?.includes(sourceIndex) ??
+          // When sourcemap is not available, fallback to checking `frame.file`.
+          // e.g. In pages router, nextjs server code is not bundled into the page.
+          shouldIgnorePath(frame.file)
       }
 
       const originalStackFrame: IgnorableStackFrame = {

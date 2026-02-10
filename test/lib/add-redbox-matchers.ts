@@ -139,9 +139,7 @@ function focusSource(
     sourceLines[0].startsWith('./node_modules/.pnpm/next@file+') ||
     sourceLines[0].startsWith('./node_modules/.pnpm/file+') ||
     // e.g. "next-app-loader?<SEARCH PARAMS>" (in rspack, the loader doesn't seem to be prefixed with node_modules)
-    /^next-[a-zA-Z0-9\-_]+?-loader\?/.test(sourceLines[0]) ||
-    // Relative paths to Next.js internal source files (e.g. "../src/client/link.tsx")
-    /^\.\.\/.*src\//.test(sourceLines[0])
+    /^next-[a-zA-Z0-9\-_]+?-loader\?/.test(sourceLines[0])
   ) {
     focusedSource = `<FIXME-nextjs-internal-source>\n${sourceLines.slice(1).join('\n')}`
   }
