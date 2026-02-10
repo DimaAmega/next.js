@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useEffect } from 'react'
+import { useCallback, useReducer } from 'react'
 import { CodeFrame } from '../../components/code-frame/code-frame'
 import { ErrorOverlayCallStack } from '../../components/errors/error-overlay-call-stack/error-overlay-call-stack'
 import { PSEUDO_HTML_DIFF_STYLES } from './component-stack-pseudo-html'
@@ -13,56 +13,117 @@ type RuntimeErrorProps = {
   dialogResizerRef: React.RefObject<HTMLDivElement | null>
 }
 
-export function RuntimeError({ error, dialogResizerRef }: RuntimeErrorProps) {
-  const frames = useFrames(error)
-  // TODO: Select the nearest frame that's not ignore-listed when hiding ignore-listed
-  // frames.
-  const [isIgnoreListOpen, setIsIgnoreListOpen] = useState(false)
+interface SelectedFrameState {
+  isIgnoreListOpen: boolean
+  selectedFrameIndex: number
+}
 
-  // Find all frames that have code frames (can be displayed)
-  const framesWithCodeFrame = useMemo(() => {
-    return frames
-      .map((frame, index) => ({ frame, index }))
-      .filter(({ frame }) => Boolean(frame.originalCodeFrame))
-  }, [frames])
-
-  // Find the first non-ignored frame with code frame as the default selection
-  // Don't fall back to ignored frames - match original behavior of showing nothing
-  const defaultFrameIndex = useMemo(() => {
-    const firstNonIgnored = framesWithCodeFrame.find(
-      ({ frame }) => !frame.ignored
-    )
-    return firstNonIgnored?.index ?? null
-  }, [framesWithCodeFrame])
-
-  const [selectedFrameIndex, setSelectedFrameIndex] = useState<number | null>(
-    defaultFrameIndex
+function getDefaultSelectedFrameState(
+  frames: ReturnType<typeof useFrames>
+): SelectedFrameState {
+  const defaultIsIgnoreListOpen = false
+  const defaultSelectedFrameIndex = frames.findIndex(
+    (frame) => defaultIsIgnoreListOpen || !frame.ignored
   )
 
-  // Reset selection when error changes
-  useEffect(() => {
-    setSelectedFrameIndex(defaultFrameIndex)
-  }, [defaultFrameIndex])
+  return {
+    isIgnoreListOpen: defaultIsIgnoreListOpen,
+    selectedFrameIndex: defaultSelectedFrameIndex,
+  }
+}
 
-  const selectedFrame = useMemo(() => {
-    if (selectedFrameIndex === null) return null
-    return frames[selectedFrameIndex] ?? null
-  }, [frames, selectedFrameIndex])
+export function RuntimeError({ error, dialogResizerRef }: RuntimeErrorProps) {
+  const frames = useFrames(error)
+  const [{ isIgnoreListOpen, selectedFrameIndex }, dispatch] = useReducer(
+    (
+      prevState: SelectedFrameState,
+      action:
+        | { type: 'toggleIgnoreList' }
+        | { type: 'selectFrame'; index: number }
+    ) => {
+      switch (action.type) {
+        case 'toggleIgnoreList':
+          const nextIsIgnoreListOpen = !prevState.isIgnoreListOpen
+          if (nextIsIgnoreListOpen) {
+            // When we show ignore-listed, the current selected frame is still visible.
+            // No need to change the index
+            return {
+              ...prevState,
+              isIgnoreListOpen: nextIsIgnoreListOpen,
+            }
+          } else {
+            const previouslySelectedFrameIndex = prevState.selectedFrameIndex
+            // The selected frame may have been hidden, find the next best one.
+            if (frames[previouslySelectedFrameIndex].ignored) {
+              // prefer a frame closer to the callsite
+              for (let i = previouslySelectedFrameIndex - 1; i >= 0; i--) {
+                if (!frames[i].ignored) {
+                  return {
+                    ...prevState,
+                    selectedFrameIndex: i,
+                    isIgnoreListOpen: nextIsIgnoreListOpen,
+                  }
+                }
+              }
+              // fallback to a deeper one
+              for (
+                let i = previouslySelectedFrameIndex + 1;
+                i < frames.length;
+                i++
+              ) {
+                if (!frames[i].ignored) {
+                  return {
+                    ...prevState,
+                    selectedFrameIndex: i,
+                    isIgnoreListOpen: nextIsIgnoreListOpen,
+                  }
+                }
+              }
 
-  const handleFrameSelect = useCallback((index: number) => {
-    setSelectedFrameIndex(index)
-  }, [])
+              // Found no suitable frame to select e.g. all frames are ignore-listed
+              // or there are no frames at all.
+              return {
+                ...prevState,
+                selectedFrameIndex: -1,
+                isIgnoreListOpen: nextIsIgnoreListOpen,
+              }
+            } else {
+              return {
+                ...prevState,
+                isIgnoreListOpen: nextIsIgnoreListOpen,
+              }
+            }
+          }
+        case 'selectFrame':
+          return {
+            ...prevState,
+            selectedFrameIndex: action.index,
+          }
+        default:
+          return prevState
+      }
+    },
+    frames,
+    getDefaultSelectedFrameState
+  )
+  const setIsIgnoreListOpen = useCallback(
+    () => dispatch({ type: 'toggleIgnoreList' }),
+    []
+  )
 
-  // Only show codeframe if the selected frame is visible
-  // (i.e., not ignored, or ignored but ignore list is open)
-  const isSelectedFrameVisible =
-    selectedFrame && (!selectedFrame.ignored || isIgnoreListOpen)
+  const selectedFrame =
+    selectedFrameIndex !== -1 ? frames[selectedFrameIndex] : null
+
+  const handleFrameSelect = useCallback(
+    (index: number) => dispatch({ type: 'selectFrame', index }),
+    []
+  )
 
   return (
     <>
-      {isSelectedFrameVisible &&
-        selectedFrame?.originalStackFrame &&
-        selectedFrame?.originalCodeFrame && (
+      {selectedFrame !== null &&
+        selectedFrame.originalStackFrame &&
+        selectedFrame.originalCodeFrame && (
           <CodeFrame
             stackFrame={selectedFrame.originalStackFrame}
             codeFrame={selectedFrame.originalCodeFrame}
