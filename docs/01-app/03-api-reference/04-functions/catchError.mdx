@@ -1,0 +1,286 @@
+---
+title: catchError
+description: API Reference for the catchError function.
+related:
+  title: Learn more about error handling
+  links:
+    - app/getting-started/error-handling
+    - app/api-reference/file-conventions/error
+---
+
+The `catchError` function creates a component that wraps its children in an error boundary. It provides a programmatic alternative to the [`error.js`](/docs/app/api-reference/file-conventions/error) file convention, giving you more granular control over where error boundaries are placed in your component tree.
+
+`catchError` can be called from both [Server and Client Components](/docs/app/getting-started/server-and-client-components).
+
+```tsx filename="app/catch-error-wrapper.tsx" switcher
+'use client'
+
+import { catchError } from 'next/navigation'
+
+function ErrorFallback(
+  props: { title: string },
+  { error, retry }: { error: Error; retry: () => void }
+) {
+  return (
+    <div>
+      <h2>{props.title}</h2>
+      <p>{error.message}</p>
+      <button onClick={() => retry()}>Try again</button>
+    </div>
+  )
+}
+
+export default catchError(ErrorFallback)
+```
+
+```jsx filename="app/catch-error-wrapper.js" switcher
+'use client'
+
+import { catchError } from 'next/navigation'
+
+function ErrorFallback(props, { error, retry }) {
+  return (
+    <div>
+      <h2>{props.title}</h2>
+      <p>{error.message}</p>
+      <button onClick={() => retry()}>Try again</button>
+    </div>
+  )
+}
+
+export default catchError(ErrorFallback)
+```
+
+## Reference
+
+### Parameters
+
+`catchError` accepts a single argument:
+
+```ts
+const ErrorWrapper = catchError(fallback)
+```
+
+#### `fallback`
+
+A function that renders the error UI when an error is caught. It receives two arguments:
+
+- `props` — The props passed to the wrapper component (excluding `children`).
+- `errorInfo` — An object containing information about the error:
+
+| Property         | Type                                                                                        | Description                                                                                                                                                 |
+| ---------------- | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `error`          | [`Error`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Error) | The error instance that was caught.                                                                                                                         |
+| `retry`          | `() => void`                                                                                | Re-fetches and re-renders the error boundary's contents. If successful, the fallback is replaced with the re-rendered result.                               |
+| `reset`          | `() => void`                                                                                | Resets the error state and re-renders without re-fetching. Use [`retry()`](/docs/app/api-reference/file-conventions/error#retry) in most cases.             |
+| `componentStack` | `string \| null`                                                                            | The React component stack trace at the time the error was thrown.                                                                                           |
+| `ownerStack`     | `string \| null`                                                                            | The owner component stack captured via [`React.captureOwnerStack()`](https://react.dev/reference/react/captureOwnerStack). DEV-only — `null` in production. |
+
+The `fallback` function must be a Client Component (or defined in a `'use client'` module).
+
+### Returns
+
+`catchError` returns a React component that:
+
+- Accepts the same props as your fallback's first argument, plus `children`.
+- Wraps `children` in an error boundary.
+- Renders the `fallback` when an error is caught in `children`.
+
+## Examples
+
+### Client Component
+
+Define a fallback and use the returned component to wrap parts of your UI:
+
+```tsx filename="app/dashboard/layout.tsx" switcher
+import ErrorWrapper from './catch-error-wrapper'
+
+export default function Layout({ children }: { children: React.ReactNode }) {
+  return <ErrorWrapper title="Dashboard Error">{children}</ErrorWrapper>
+}
+```
+
+```jsx filename="app/dashboard/layout.js" switcher
+import ErrorWrapper from './catch-error-wrapper'
+
+export default function Layout({ children }) {
+  return <ErrorWrapper title="Dashboard Error">{children}</ErrorWrapper>
+}
+```
+
+### Server Component
+
+`catchError` can be called from a Server Component. The fallback function must still be a Client Component:
+
+```tsx filename="app/catch-error-fallback.tsx" switcher
+'use client'
+
+export function ErrorFallback(
+  props: { title: string },
+  { error, retry }: { error: Error; retry: () => void }
+) {
+  return (
+    <div>
+      <h2>{props.title}</h2>
+      <p>{error.message}</p>
+      <button onClick={() => retry()}>Try again</button>
+    </div>
+  )
+}
+```
+
+```jsx filename="app/catch-error-fallback.js" switcher
+'use client'
+
+export function ErrorFallback(props, { error, retry }) {
+  return (
+    <div>
+      <h2>{props.title}</h2>
+      <p>{error.message}</p>
+      <button onClick={() => retry()}>Try again</button>
+    </div>
+  )
+}
+```
+
+```tsx filename="app/dashboard/layout.tsx" switcher
+import { catchError } from 'next/navigation'
+import { ErrorFallback } from '../catch-error-fallback'
+
+const ErrorWrapper = catchError(ErrorFallback)
+
+export default function Layout({ children }: { children: React.ReactNode }) {
+  return <ErrorWrapper title="Dashboard Error">{children}</ErrorWrapper>
+}
+```
+
+```jsx filename="app/dashboard/layout.js" switcher
+import { catchError } from 'next/navigation'
+import { ErrorFallback } from '../catch-error-fallback'
+
+const ErrorWrapper = catchError(ErrorFallback)
+
+export default function Layout({ children }) {
+  return <ErrorWrapper title="Dashboard Error">{children}</ErrorWrapper>
+}
+```
+
+### Recovering from errors
+
+Use `retry()` to prompt the user to recover from the error. When called, the function re-fetches and re-renders the error boundary's contents. If successful, the fallback is replaced with the re-rendered result.
+
+In most cases, use `retry()` instead of `reset()`. The `reset()` function only clears the error state and re-renders without re-fetching, which means it won't recover from Server Component errors.
+
+```tsx filename="app/catch-error-wrapper.tsx" highlight={9,12} switcher
+'use client'
+
+import { catchError } from 'next/navigation'
+
+function ErrorFallback(
+  props: {},
+  {
+    error,
+    retry,
+    reset,
+  }: { error: Error; retry: () => void; reset: () => void }
+) {
+  return (
+    <div>
+      <p>{error.message}</p>
+      <button onClick={() => retry()}>Try again</button>
+      <button onClick={() => reset()}>Reset</button>
+    </div>
+  )
+}
+
+export default catchError(ErrorFallback)
+```
+
+```jsx filename="app/catch-error-wrapper.js" highlight={7,10} switcher
+'use client'
+
+import { catchError } from 'next/navigation'
+
+function ErrorFallback(props, { error, retry, reset }) {
+  return (
+    <div>
+      <p>{error.message}</p>
+      <button onClick={() => retry()}>Try again</button>
+      <button onClick={() => reset()}>Reset</button>
+    </div>
+  )
+}
+
+export default catchError(ErrorFallback)
+```
+
+### Server-rendered error fallback
+
+You can pass server-rendered content as a prop to display data-driven fallback UI. This works by rendering a Server Component as a `React.ReactNode` prop that the fallback displays when an error is caught.
+
+> **Good to know**: This pattern eagerly renders the fallback on every page render, even when no error occurs. For most use cases, a simpler client-side fallback is sufficient.
+
+```tsx filename="app/error-boundary.tsx" switcher
+'use client'
+
+import { catchError } from 'next/navigation'
+import type { ErrorInfo } from 'next/navigation'
+
+function ErrorFallback(
+  props: { fallback: React.ReactNode },
+  errorInfo: ErrorInfo
+) {
+  return props.fallback
+}
+
+export default catchError(ErrorFallback)
+```
+
+```jsx filename="app/error-boundary.js" switcher
+'use client'
+
+import { catchError } from 'next/navigation'
+
+function ErrorFallback(props, errorInfo) {
+  return props.fallback
+}
+
+export default catchError(ErrorFallback)
+```
+
+```tsx filename="app/dashboard/layout.tsx" switcher
+import ErrorBoundary from '../error-boundary'
+
+async function ErrorFallback() {
+  const data = await getData()
+  return <div>{data.message}</div>
+}
+
+export default function Layout({ children }: { children: React.ReactNode }) {
+  return <ErrorBoundary fallback={<ErrorFallback />}>{children}</ErrorBoundary>
+}
+```
+
+```jsx filename="app/dashboard/layout.js" switcher
+import ErrorBoundary from '../error-boundary'
+
+async function ErrorFallback() {
+  const data = await getData()
+  return <div>{data.message}</div>
+}
+
+export default function Layout({ children }) {
+  return <ErrorBoundary fallback={<ErrorFallback />}>{children}</ErrorBoundary>
+}
+```
+
+> **Good to know**:
+>
+> - Unlike the `error.js` file convention which is scoped to route segments, `catchError` can be used to wrap any part of your component tree, giving you more precise control over error boundaries.
+> - Props passed to the wrapper component are forwarded to the fallback function, making it easy to create reusable error UIs with different configurations.
+
+## Version History
+
+| Version   | Changes                  |
+| --------- | ------------------------ |
+| `v16.2.0` | `catchError` introduced. |
