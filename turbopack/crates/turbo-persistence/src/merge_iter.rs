@@ -37,7 +37,7 @@ impl<'l, T: Iterator<Item = Result<LookupEntry<'l>>>> Ord for ActiveIterator<'l,
     }
 }
 
-/// An iterator that merges multiple sorted iterators into a single sorted iterator. Internal it
+/// An iterator that merges multiple sorted iterators into a single sorted iterator. Internally it
 /// uses an heap of iterators to iterate them in order.
 pub struct MergeIter<'l, T: Iterator<Item = Result<LookupEntry<'l>>>> {
     heap: BinaryHeap<ActiveIterator<'l, T>>,

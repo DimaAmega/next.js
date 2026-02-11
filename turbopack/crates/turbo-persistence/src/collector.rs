@@ -1,8 +1,10 @@
 use std::mem::take;
 
 use crate::{
-    ValueBuffer,
-    collector_entry::{CollectorEntry, CollectorEntryValue, EntryKey, TINY_VALUE_THRESHOLD},
+    FamilyKind, ValueBuffer,
+    collector_entry::{
+        CollectorEntry, CollectorEntryValue, EntryKey, TINY_VALUE_THRESHOLD, sort_and_dedup,
+    },
     constants::{
         DATA_THRESHOLD_PER_INITIAL_FILE, MAX_ENTRIES_PER_INITIAL_FILE, MAX_SMALL_VALUE_SIZE,
     },
@@ -110,10 +112,16 @@ impl<K: StoreKey, const SIZE_SHIFT: usize> Collector<K, SIZE_SHIFT> {
         self.entries.push(entry);
     }
 
-    /// Sorts the entries and returns them along with the total key size. This doesn't
-    /// clear the entries.
-    pub fn sorted(&mut self) -> (&[CollectorEntry<K>], usize) {
-        self.entries.sort_unstable_by(|a, b| a.key.cmp(&b.key));
+    /// Sorts and deduplicates entries according to the family kind, returning the entries
+    /// in (key, value) order suitable for SST storage.
+    ///
+    /// For `SingleValue`: only the last entry per key is kept (latest write wins).
+    /// For `MultiValue`: deletes discard all prior entries for that key within this batch,
+    /// but the tombstone itself is kept to shadow older SSTs. Duplicate values are also removed.
+    pub fn sorted(&mut self, kind: FamilyKind) -> (&[CollectorEntry<K>], usize) {
+        let dropped = sort_and_dedup::<false, _>(&mut self.entries, kind);
+        self.total_key_size -= dropped.key_size;
+        self.total_value_size -= dropped.value_size;
         (&self.entries, self.total_key_size)
     }
 

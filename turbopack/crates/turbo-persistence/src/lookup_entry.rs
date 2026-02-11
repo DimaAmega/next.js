@@ -1,10 +1,14 @@
+use std::cmp::Ordering;
+
 use crate::{
     ArcSlice,
+    collector_entry::{SortableEntry, ValueCategory},
     constants::{MAX_INLINE_VALUE_SIZE, MAX_SMALL_VALUE_SIZE},
     static_sorted_file_builder::{Entry, EntryValue},
 };
 
 /// A value from a SST file lookup.
+#[derive(Eq, PartialEq)]
 pub enum LookupValue {
     /// The value was deleted.
     Deleted,
@@ -64,6 +68,24 @@ impl LazyLookupValue<'_> {
             _ => 0,
         }
     }
+
+    /// Classify this value for sort ordering purposes.
+    ///
+    /// For `Medium` (compressed) values, the compressed block bytes are used for comparison.
+    /// This is a proxy that provides a consistent total order, though cross-type comparisons
+    /// between `Slice` and `Medium` may not reflect semantic equality.
+    fn category(&self) -> ValueCategory<'_> {
+        match self {
+            LazyLookupValue::Eager(LookupValue::Deleted) => ValueCategory::Deleted,
+            LazyLookupValue::Eager(LookupValue::Slice { value }) => {
+                ValueCategory::ByteContent(value.as_ref())
+            }
+            LazyLookupValue::Medium { block, .. } => ValueCategory::ByteContent(block),
+            LazyLookupValue::Eager(LookupValue::Blob { sequence_number }) => {
+                ValueCategory::Blob(*sequence_number)
+            }
+        }
+    }
 }
 
 /// An entry from a SST file lookup.
@@ -74,6 +96,43 @@ pub struct LookupEntry<'l> {
     pub key: ArcSlice<u8>,
     /// The value.
     pub value: LazyLookupValue<'l>,
+}
+
+impl PartialEq for LookupEntry<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        self.cmp(other) == Ordering::Equal
+    }
+}
+
+impl Eq for LookupEntry<'_> {}
+
+impl PartialOrd for LookupEntry<'_> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for LookupEntry<'_> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.cmp_key(other)
+            .then_with(|| self.value.category().cmp(&other.value.category()))
+    }
+}
+
+impl SortableEntry for LookupEntry<'_> {
+    fn cmp_key(&self, other: &Self) -> Ordering {
+        self.hash
+            .cmp(&other.hash)
+            .then_with(|| (*self.key).cmp(&*other.key))
+    }
+
+    fn is_deleted(&self) -> bool {
+        matches! {self.value, LazyLookupValue::Eager(LookupValue::Deleted)}
+    }
+
+    fn entry_size(&self) -> (usize, usize) {
+        (self.key.len(), self.value.uncompressed_size_in_sst())
+    }
 }
 
 impl Entry for LookupEntry<'_> {
@@ -114,3 +173,6 @@ impl Entry for LookupEntry<'_> {
         }
     }
 }
+
+// Re-export the generic sort_and_dedup so callers can use `lookup_entry::sort_and_dedup`.
+pub use crate::collector_entry::sort_and_dedup;
