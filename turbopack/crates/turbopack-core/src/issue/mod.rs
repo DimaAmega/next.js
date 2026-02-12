@@ -628,7 +628,7 @@ impl IssueSource {
                     .await?;
             let unmapped_source = self.with_source(generated);
             return Ok(Vc::cell(vec![AdditionalIssueSource {
-                description: (*description).clone(),
+                description: format!("Generated code of {}", description).into(),
                 source: unmapped_source,
             }]));
         }
@@ -1038,6 +1038,7 @@ pub struct PlainIssueSource {
 #[derive(Clone, Debug, PartialOrd, Ord)]
 pub struct PlainSource {
     pub ident: ReadRef<RcStr>,
+    pub file_path: ReadRef<RcStr>,
     #[turbo_tasks(debug_ignore)]
     pub content: ReadRef<FileContent>,
 }
@@ -1054,6 +1055,7 @@ impl PlainSource {
 
         Ok(PlainSource {
             ident: asset.ident().to_string().await?,
+            file_path: asset.ident().path().to_string().await?,
             content,
         }
         .cell())
