@@ -1,6 +1,6 @@
 use anyhow::{Result, bail};
 use turbo_rcstr::RcStr;
-use turbo_tasks::{ResolvedVc, ValueToString, Vc};
+use turbo_tasks::{ResolvedVc, ValueToString, Vc, turbobail};
 
 use crate::{FileContent, FileMeta, FileSystem, FileSystemPath, LinkContent, RawDirectoryContent};
 
@@ -57,9 +57,9 @@ impl AttachedFileSystem {
             fs if fs == this.child_fs => {
                 Ok(self.child_path().await?.join(&contained_path.path)?.cell())
             }
-            _ => bail!(
+            _ => turbobail!(
                 "path {} not part of self, the root fs or the child fs",
-                contained_path.value_to_string().await?
+                contained_path
             ),
         }
     }

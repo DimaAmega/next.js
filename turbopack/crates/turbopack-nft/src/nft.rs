@@ -2,7 +2,7 @@ use std::{collections::HashSet, env::current_dir, path::PathBuf};
 
 use anyhow::Result;
 use turbo_rcstr::{RcStr, rcstr};
-use turbo_tasks::{ResolvedVc, TransientInstance, TryJoinIterExt, ValueToString, Vc};
+use turbo_tasks::{ResolvedVc, TransientInstance, TryJoinIterExt, Vc, turbofmt};
 use turbo_tasks_fs::{DiskFileSystem, FileSystem};
 use turbopack::{
     ModuleAssetContext,
@@ -161,11 +161,11 @@ async fn to_graph(asset: ResolvedVc<Box<dyn OutputAsset>>, max_depth: usize) -> 
                     queue.push((depth + 1, asset));
                 }
             }
-            result.push(format!("{}{}", indent, asset.path().to_string().await?).into());
+            result.push(turbofmt!("{}{}", indent, asset.path()).await?);
         } else if references.is_empty() {
-            result.push(format!("{}{} *", indent, asset.path().to_string().await?).into());
+            result.push(turbofmt!("{}{} *", indent, asset.path()).await?);
         } else {
-            result.push(format!("{}{} *...", indent, asset.path().to_string().await?).into());
+            result.push(turbofmt!("{}{} *...", indent, asset.path()).await?);
         }
     }
     result.push("".into());

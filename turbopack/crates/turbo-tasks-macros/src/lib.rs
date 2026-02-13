@@ -17,6 +17,7 @@ mod expand;
 mod ident;
 mod primitive_input;
 mod self_filter;
+mod turbofmt_macro;
 mod value_trait_arguments;
 
 use proc_macro::TokenStream;
@@ -119,4 +120,31 @@ pub fn value_impl(args: TokenStream, input: TokenStream) -> TokenStream {
 #[proc_macro]
 pub fn primitive(input: TokenStream) -> TokenStream {
     primitive_macro::primitive(input)
+}
+
+/// Async format macro that resolves `ValueToStringify` arguments before formatting.
+///
+/// Returns a future that must be `.await`ed:
+/// ```ignore
+/// let s: RcStr = turbofmt!("asset {} in path {}", asset.ident(), base_path).await?;
+/// ```
+///
+/// Each argument is resolved via `ValueToStringify::to_stringify(&arg).await?`,
+/// then passed to `format!()`. Returns `impl Future<Output = Result<RcStr>>`.
+#[proc_macro]
+pub fn turbofmt(input: TokenStream) -> TokenStream {
+    turbofmt_macro::turbofmt(input)
+}
+
+/// Async bail macro that resolves `ValueToStringify` arguments before bailing.
+///
+/// ```ignore
+/// turbobail!("asset {} is not in path {}", asset.ident(), base_path);
+/// ```
+///
+/// Resolves arguments via `ValueToStringify` then calls `anyhow::bail!()`.
+/// Has implicit await and return flow, just like `bail!()`.
+#[proc_macro]
+pub fn turbobail(input: TokenStream) -> TokenStream {
+    turbofmt_macro::turbobail(input)
 }

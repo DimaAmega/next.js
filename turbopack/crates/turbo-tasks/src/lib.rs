@@ -96,7 +96,7 @@ pub use anyhow::{Error, Result};
 use auto_hash_map::AutoSet;
 use rustc_hash::FxHasher;
 pub use shrink_to_fit::ShrinkToFit;
-pub use turbo_tasks_macros::{TaskInput, function, value_impl};
+pub use turbo_tasks_macros::{TaskInput, function, turbobail, turbofmt, value_impl};
 
 pub use crate::{
     capture_future::TurboTasksPanic,

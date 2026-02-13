@@ -78,7 +78,7 @@ use tracing::{Instrument, Level, instrument};
 use turbo_rcstr::{RcStr, rcstr};
 use turbo_tasks::{
     FxDashMap, FxIndexMap, IntoTraitRef, NonLocalValue, ReadRef, ResolvedVc, TaskInput,
-    TryJoinIterExt, Upcast, ValueToString, Vc, trace::TraceRawVcs,
+    TryJoinIterExt, Upcast, ValueToString, Vc, trace::TraceRawVcs, turbofmt,
 };
 use turbo_tasks_fs::{FileJsonContent, FileSystemPath, glob::Glob, rope::Rope};
 use turbopack_core::{
@@ -1762,7 +1762,7 @@ async fn process_parse_result(
                         Some(Comment {
                             kind: CommentKind::Line,
                             span: DUMMY_SP,
-                            text: format!(" MERGED MODULE: {}", ident.to_string().await?).into(),
+                            text: (&*turbofmt!(" MERGED MODULE: {}", ident).await?).into(),
                         })
                     } else {
                         None

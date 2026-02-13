@@ -7,6 +7,8 @@ use syn::{
     punctuated::Punctuated,
 };
 
+use crate::turbofmt_macro::{generate_arg_vars, generate_resolve_stmts};
+
 /// The parsed form of a `#[value_to_string(...)]` attribute.
 enum AttrForm {
     /// `#[value_to_string("{field} text")]` — format string with auto-field references.
@@ -307,17 +309,13 @@ fn struct_format_auto_fields_body(fmt: &str) -> (bool, TokenStream2) {
     )
 }
 
+/// Generate the body for `#[value_to_string("fmt {}", expr1, expr2)]` on structs.
+///
+/// Uses the shared `generate_resolve_stmts`/`generate_arg_vars` from `turbofmt_macro`
+/// so that format expression resolution shares a single codepath with `turbofmt!`.
 fn struct_format_exprs_body(fmt: &str, exprs: &[Expr]) -> (bool, TokenStream2) {
-    let (resolve_stmts, vars): (Vec<TokenStream2>, Vec<syn::Ident>) = exprs
-        .iter()
-        .enumerate()
-        .map(|(i, expr)| {
-            let var = format_ident!("__arg{}", i);
-            let stmt =
-                quote! { let #var = turbo_tasks::display::ValueToStringify::to_stringify(&(#expr)).await?; };
-            (stmt, var)
-        })
-        .unzip();
+    let resolve_stmts = generate_resolve_stmts(exprs, true);
+    let vars = generate_arg_vars(exprs.len());
 
     (
         true,
@@ -479,6 +477,10 @@ fn generate_enum_format_auto_fields(
     }
 }
 
+/// Generate an enum match arm for `#[value_to_string("fmt {}", expr1, expr2)]`.
+///
+/// Uses the shared `generate_resolve_stmts`/`generate_arg_vars` from `turbofmt_macro`
+/// so that format expression resolution shares a single codepath with `turbofmt!`.
 fn generate_enum_format_exprs(
     ident: &syn::Ident,
     variant_ident: &syn::Ident,
@@ -487,16 +489,9 @@ fn generate_enum_format_exprs(
     exprs: &[Expr],
 ) -> TokenStream2 {
     let pattern = enum_destructure_all(ident, variant_ident, fields);
-    let (resolve_stmts, vars): (Vec<TokenStream2>, Vec<syn::Ident>) = exprs
-        .iter()
-        .enumerate()
-        .map(|(i, expr)| {
-            let var = format_ident!("__arg{}", i);
-            let stmt =
-                quote! { let #var = turbo_tasks::display::ValueToStringify::to_stringify(#expr).await?; };
-            (stmt, var)
-        })
-        .unzip();
+    // Enum context: fields are already references, so don't add &
+    let resolve_stmts = generate_resolve_stmts(exprs, false);
+    let vars = generate_arg_vars(exprs.len());
     quote! {
         #pattern => {
             #(#resolve_stmts)*

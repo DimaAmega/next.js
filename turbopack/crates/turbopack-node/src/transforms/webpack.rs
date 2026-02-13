@@ -585,18 +585,14 @@ impl EvaluateContext for WebpackLoaderContext {
                     {
                         Ok(ResponseMessage::Resolve { path })
                     } else {
-                        bail!(
+                        turbobail!(
                             "Resolving {} in {} ends up on a different filesystem",
-                            request.to_string().await?,
-                            lookup_path.value_to_string().await?
+                            request,
+                            lookup_path
                         );
                     }
                 } else {
-                    bail!(
-                        "Unable to resolve {} in {}",
-                        request.to_string().await?,
-                        lookup_path.value_to_string().await?
-                    );
+                    turbobail!("Unable to resolve {} in {}", request, lookup_path);
                 }
             }
             RequestMessage::TrackFileRead { file } => {

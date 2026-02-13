@@ -17,6 +17,16 @@ pub trait ValueToString {
     fn to_string(self: Vc<Self>) -> Vc<RcStr>;
 }
 
+/// Identity implementation: `RcStr` just returns itself, allowing `Vc<RcStr>`
+/// and `ResolvedVc<RcStr>` to work with `turbofmt!` and `turbobail!`.
+#[turbo_tasks::value_impl]
+impl ValueToString for RcStr {
+    #[turbo_tasks::function]
+    fn to_string(&self) -> Vc<RcStr> {
+        Vc::cell(self.clone())
+    }
+}
+
 /// A helper trait used by the `#[derive(ValueToString)]` macro.
 ///
 /// Provides async string conversion with a blanket implementation for `Display`

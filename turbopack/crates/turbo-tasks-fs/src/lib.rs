@@ -65,7 +65,7 @@ use turbo_rcstr::{RcStr, rcstr};
 use turbo_tasks::{
     ApplyEffectsContext, Completion, InvalidationReason, Invalidator, NonLocalValue, ReadRef,
     ResolvedVc, TaskInput, TurboTasksApi, ValueToString, Vc, debug::ValueDebugFormat, effect,
-    mark_session_dependent, parallel, trace::TraceRawVcs, turbo_tasks_weak,
+    mark_session_dependent, parallel, trace::TraceRawVcs, turbo_tasks_weak, turbobail, turbofmt,
 };
 use turbo_tasks_hash::{DeterministicHash, DeterministicHasher, hash_xxh3_hash64};
 use turbo_unix_path::{
@@ -974,10 +974,7 @@ impl FileSystem for DiskFileSystem {
 
         // Check if path is denied - if so, return an error
         if self.inner.is_path_denied(&fs_path) {
-            bail!(
-                "Cannot write to denied path: {}",
-                fs_path.value_to_string().await?
-            );
+            turbobail!("Cannot write to denied path: {}", fs_path);
         }
         let full_path = self.to_sys_path(&fs_path);
 
@@ -1107,10 +1104,7 @@ impl FileSystem for DiskFileSystem {
 
         // Check if path is denied - if so, return an error
         if self.inner.is_path_denied(&fs_path) {
-            bail!(
-                "Cannot write link to denied path: {}",
-                fs_path.value_to_string().await?
-            );
+            turbobail!("Cannot write link to denied path: {}", fs_path);
         }
 
         let content = target.await?;
@@ -1320,10 +1314,7 @@ impl FileSystem for DiskFileSystem {
 
         // Check if path is denied - if so, return an error (metadata shouldn't be readable)
         if self.inner.is_path_denied(&fs_path) {
-            bail!(
-                "Cannot read metadata from denied path: {}",
-                fs_path.value_to_string().await?
-            );
+            turbobail!("Cannot read metadata from denied path: {}", fs_path);
         }
 
         self.inner.register_read_invalidator(&full_path)?;
@@ -1387,9 +1378,7 @@ impl FileSystemPath {
 
 #[turbo_tasks::function]
 async fn value_to_string(path: FileSystemPath) -> Result<Vc<RcStr>> {
-    Ok(Vc::cell(
-        format!("[{}]/{}", path.fs.to_string().await?, path.path).into(),
-    ))
+    Ok(Vc::cell(turbofmt!("[{}]/{}", path.fs, path.path).await?))
 }
 
 impl FileSystemPath {
