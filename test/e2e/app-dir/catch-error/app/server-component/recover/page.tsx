@@ -9,15 +9,11 @@ export default function Page() {
   )
 }
 
-let hasThrown = false
-
 async function PageImpl() {
+  // Throw only during the runtime
   await connection()
 
-  if (!hasThrown) {
-    hasThrown = true
-    throw new Error('this is a test')
-  }
+  throw new Error('navigation reset test')
 
-  return <p id="recover">Recovered</p>
+  return null
 }

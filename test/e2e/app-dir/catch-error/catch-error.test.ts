@@ -91,7 +91,9 @@ describe('app-dir - catchError', () => {
     await browser.waitForElementByCss('#navigation-reset-error')
 
     expect(await browser.elementByCss('#navigation-reset-error').text()).toBe(
-      'navigation reset test'
+      isNextDev
+        ? 'navigation reset test'
+        : 'An error occurred in the Server Components render. The specific message is omitted in production builds to avoid leaking sensitive details. A digest property is included on this error instance which may provide additional details about the nature of the error.'
     )
 
     await browser.elementByCss('#navigation-reset-safe-link').click()
