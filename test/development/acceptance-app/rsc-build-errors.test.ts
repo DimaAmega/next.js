@@ -256,6 +256,68 @@ describe('Error overlay - RSC build errors', () => {
     })
   }
 
+  it('should error when catchError from next/error is used in a server component', async () => {
+    await using sandbox = await createSandbox(
+      next,
+      new Map([
+        [
+          'app/page.js',
+          outdent`
+            import { catchError } from 'next/error'
+
+            export default function Page() {
+              return 'Hello world'
+            }
+          `,
+        ],
+      ])
+    )
+
+    const { session } = sandbox
+    await session.waitForRedbox()
+    const source = await session.getRedboxSource()
+    expect(source).toInclude('catchError')
+    expect(source).toInclude('Client Component')
+  })
+
+  test.each([
+    ['middleware.js', 'export function middleware() {}'],
+    ['proxy.js', 'export function proxy() {}'],
+    ['instrumentation.js', 'export function register() {}'],
+  ])(
+    'should error when catchError from next/error is imported in %s',
+    async (entryFile, exportCode) => {
+      await using sandbox = await createSandbox(
+        next,
+        new Map([
+          [
+            'app/page.js',
+            outdent`
+              export default function Page() {
+                return 'Hello world'
+              }
+            `,
+          ],
+          [
+            entryFile,
+            outdent`
+              import { catchError } from 'next/error'
+              ${exportCode}
+            `,
+          ],
+        ])
+      )
+
+      const { session } = sandbox
+      await session.waitForRedbox()
+      const source = await session.getRedboxSource()
+      const description = await session.getRedboxDescription()
+      const redboxText = `${source ?? ''}\n${description ?? ''}`
+      expect(redboxText).toInclude('catchError')
+      expect(redboxText).toInclude('Client Component')
+    }
+  )
+
   it('should allow to use and handle rsc poisoning server-only', async () => {
     await using sandbox = await createSandbox(
       next,

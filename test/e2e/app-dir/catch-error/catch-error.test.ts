@@ -85,6 +85,61 @@ describe('app-dir - catchError', () => {
     })
   })
 
+  it('should reset boundary state when navigating to a sibling route', async () => {
+    const browser = await next.browser('/navigation-reset/error')
+
+    await browser.waitForElementByCss('#navigation-reset-error')
+
+    expect(await browser.elementByCss('#navigation-reset-error').text()).toBe(
+      'navigation reset test'
+    )
+
+    await browser.elementByCss('#navigation-reset-safe-link').click()
+    await browser.waitForElementByCss('#navigation-reset-safe')
+
+    expect(await browser.elementByCss('#navigation-reset-safe').text()).toBe(
+      'Navigation reset safe page'
+    )
+  })
+
+  describe('Pages Router error', () => {
+    it('should recover after reset', async () => {
+      const browser = await next.browser('/pages-router')
+
+      await browser
+        .elementByCss('#pages-trigger')
+        .click()
+        .waitForElementByCss('#pages-error-message')
+
+      expect(await browser.elementByCss('#pages-error-message').text()).toBe(
+        'this is a pages test'
+      )
+
+      await browser.eval(`document.getElementById('pages-reset')?.click()`)
+      await browser.waitForElementByCss('#pages-trigger')
+
+      expect(await browser.elementByCss('#pages-trigger').text()).toBe(
+        'Trigger Error!'
+      )
+    })
+
+    it('should throw when retry is called', async () => {
+      const browser = await next.browser('/pages-router')
+
+      await browser
+        .elementByCss('#pages-trigger')
+        .click()
+        .waitForElementByCss('#pages-error-message')
+
+      await browser.eval(`document.getElementById('pages-retry')?.click()`)
+      await browser.waitForElementByCss('#pages-retry-error')
+
+      expect(await browser.elementByCss('#pages-retry-error').text()).toBe(
+        '`retry()` can only be used in the App Router. Use `reset()` in the Pages Router.'
+      )
+    })
+  })
+
   it('should pass componentStack and ownerStack to error component', async () => {
     const browser = await next.browser('/client-component')
 
@@ -110,15 +165,13 @@ describe('app-dir - catchError', () => {
            "at HTTPAccessFallbackBoundary",
            "at LoadingBoundary",
            "at ErrorBoundary",
-           "at InnerScrollAndFocusHandler",
+           "at InnerScrollAndFocusHandlerOld",
            "at ScrollAndFocusHandler",
            "at RenderFromTemplateContext",
            "at SegmentStateProvider",
            "at Activity",
            "at OuterLayoutRouter",
-           "at ErrorBoundaryHandler",
-           "at ErrorBoundary",
-           "at CatchErrorBoundary",
+           "at NextErrorBoundary",
            "at CatchErrorWrapper",
            "at Layout",
            "at SegmentViewNode",
@@ -129,7 +182,7 @@ describe('app-dir - catchError', () => {
            "at HTTPAccessFallbackBoundary",
            "at LoadingBoundary",
            "at ErrorBoundary",
-           "at InnerScrollAndFocusHandler",
+           "at InnerScrollAndFocusHandlerOld",
            "at ScrollAndFocusHandler",
            "at RenderFromTemplateContext",
            "at SegmentStateProvider",
@@ -157,7 +210,62 @@ describe('app-dir - catchError', () => {
          ]
         `)
       } else {
-        expect(componentStack).toMatchInlineSnapshot(`
+        if (process.env.IS_WEBPACK_TEST) {
+          expect(componentStack).toMatchInlineSnapshot(`
+          [
+            "at Page",
+            "at ClientPageRoot",
+            "at SegmentViewNode",
+            "at InnerLayoutRouter",
+            "at RedirectErrorBoundary",
+            "at RedirectBoundary",
+            "at HTTPAccessFallbackBoundary",
+            "at LoadingBoundary",
+            "at ErrorBoundary",
+            "at InnerScrollAndFocusHandlerOld",
+            "at ScrollAndFocusHandler",
+            "at RenderFromTemplateContext",
+            "at SegmentStateProvider",
+            "at OuterLayoutRouter",
+            "at NextErrorBoundary",
+            "at CatchErrorWrapper",
+            "at Layout [Server]",
+            "at SegmentViewNode",
+            "at InnerLayoutRouter",
+            "at RedirectErrorBoundary",
+            "at RedirectBoundary",
+            "at HTTPAccessFallbackErrorBoundary",
+            "at HTTPAccessFallbackBoundary",
+            "at LoadingBoundary",
+            "at ErrorBoundary",
+            "at InnerScrollAndFocusHandlerOld",
+            "at ScrollAndFocusHandler",
+            "at RenderFromTemplateContext",
+            "at SegmentStateProvider",
+            "at OuterLayoutRouter",
+            "at body",
+            "at html",
+            "at RootLayout [Server]",
+            "at SegmentViewNode",
+            "at __next_root_layout_boundary__",
+            "at RedirectErrorBoundary",
+            "at RedirectBoundary",
+            "at HTTPAccessFallbackErrorBoundary",
+            "at HTTPAccessFallbackBoundary",
+            "at DevRootHTTPAccessFallbackBoundary",
+            "at AppDevOverlayErrorBoundary",
+            "at HotReload",
+            "at Router",
+            "at ErrorBoundaryHandler",
+            "at ErrorBoundary",
+            "at RootErrorBoundary",
+            "at AppRouter",
+            "at ServerRoot",
+            "at Root",
+          ]
+        `)
+        } else {
+          expect(componentStack).toMatchInlineSnapshot(`
         [
           "at Page",
           "at ClientPageRoot",
@@ -168,14 +276,12 @@ describe('app-dir - catchError', () => {
           "at HTTPAccessFallbackBoundary",
           "at LoadingBoundary",
           "at ErrorBoundary",
-          "at InnerScrollAndFocusHandler",
+          "at InnerScrollAndFocusHandlerOld",
           "at ScrollAndFocusHandler",
           "at RenderFromTemplateContext",
           "at SegmentStateProvider",
           "at OuterLayoutRouter",
-          "at ErrorBoundaryHandler",
-          "at ErrorBoundary",
-          "at CatchErrorBoundary",
+          "at NextErrorBoundary",
           "at CatchErrorWrapper",
           "at Layout [Server]",
           "at SegmentViewNode",
@@ -186,7 +292,7 @@ describe('app-dir - catchError', () => {
           "at HTTPAccessFallbackBoundary",
           "at LoadingBoundary",
           "at ErrorBoundary",
-          "at InnerScrollAndFocusHandler",
+          "at InnerScrollAndFocusHandlerOld",
           "at ScrollAndFocusHandler",
           "at RenderFromTemplateContext",
           "at SegmentStateProvider",
@@ -212,6 +318,7 @@ describe('app-dir - catchError', () => {
           "at Root",
         ]
       `)
+        }
       }
 
       expect(
@@ -220,8 +327,6 @@ describe('app-dir - catchError', () => {
         )
       ).toMatchInlineSnapshot(`
        [
-         "at ErrorBoundary",
-         "at CatchErrorBoundary",
          "at CatchErrorWrapper",
          "at Layout",
        ]

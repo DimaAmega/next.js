@@ -1,7 +1,7 @@
 'use client'
 
-import type { ErrorInfo } from 'next/navigation'
-import { catchError } from 'next/navigation'
+import type { ErrorInfo } from 'next/error'
+import { catchError } from 'next/error'
 
 export function ErrorFallback(
   props: { title: string },

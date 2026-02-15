@@ -1052,5 +1052,6 @@
   "1051": "Turbopack trace server is not supported on this platform (%s/%s) because native bindings are not available. Only WebAssembly (WASM) bindings were loaded, and Turbopack requires native bindings.",
   "1052": "Turbopack is not supported on this platform (%s/%s) because native bindings are not available. Only WebAssembly (WASM) bindings were loaded, and Turbopack requires native bindings. Use the --webpack flag instead.",
   "1053": "Export encountered errors on %s %s:\\n\\t%s",
-  "1054": "`catchError` can only be used in Client Components. Add the \"use client\" directive to use it."
+  "1054": "`catchError` can only be used in Client Components. Add the \"use client\" directive to use it.",
+  "1055": "`retry()` can only be used in the App Router. Use `reset()` in the Pages Router."
 }

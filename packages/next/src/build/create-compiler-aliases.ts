@@ -202,6 +202,7 @@ export function createServerOnlyClientOnlyAliases(
 
 export function createNextApiEsmAliases() {
   const mapping = {
+    error: 'next/dist/api/error',
     head: 'next/dist/api/head',
     image: 'next/dist/api/image',
     constants: 'next/dist/api/constants',
