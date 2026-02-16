@@ -749,7 +749,10 @@ async fn process_default_internal(
         .await?;
 
         let transforms = Vc::<SourceTransforms>::cell(vec![ResolvedVc::upcast(webpack_loaders)]);
-        current_source = transforms.transform(*current_source).to_resolved().await?;
+        current_source = transforms
+            .transform(*current_source, Vc::upcast(module_asset_context))
+            .to_resolved()
+            .await?;
 
         // If turbopackModuleType is specified, skip rule matching and directly
         // apply the requested module type with empty transforms (loader output
@@ -780,7 +783,10 @@ async fn process_default_internal(
                     .await;
                 }
                 ModuleRuleEffect::SourceTransforms(transforms) => {
-                    current_source = transforms.transform(*current_source).to_resolved().await?;
+                    current_source = transforms
+                        .transform(*current_source, Vc::upcast(module_asset_context))
+                        .to_resolved()
+                        .await?;
                     // Fall through to re-process with new ident
                 }
                 _ => bail!("Unexpected module rule effect for turbopackModuleType"),
