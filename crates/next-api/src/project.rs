@@ -1128,6 +1128,12 @@ impl Project {
     }
 
     #[turbo_tasks::function]
+    pub(super) fn emit_client_hashes(&self) -> Vc<bool> {
+        // TODO
+        Vc::cell(true)
+    }
+
+    #[turbo_tasks::function]
     pub(super) fn next_mode(&self) -> Vc<NextMode> {
         *self.mode
     }
