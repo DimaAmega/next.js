@@ -59,13 +59,8 @@ impl DotenvProcessEnv {
             }
 
             if let Err(e) = res {
-                return Err(e).context(
-                    turbofmt!(
-                        "unable to read {} for env vars",
-                        self.path.value_to_string()
-                    )
-                    .await?,
-                );
+                return Err(e)
+                    .context(turbofmt!("unable to read {} for env vars", self.path).await?);
             }
 
             Ok(Vc::cell(vars))
