@@ -5,7 +5,9 @@ use bincode::{Decode, Encode};
 use next_taskless::{expand_next_js_template, expand_next_js_template_no_imports};
 use serde::{Deserialize, de::DeserializeOwned};
 use turbo_rcstr::{RcStr, rcstr};
-use turbo_tasks::{FxIndexMap, NonLocalValue, TaskInput, Vc, fxindexset, trace::TraceRawVcs};
+use turbo_tasks::{
+    FxIndexMap, NonLocalValue, TaskInput, Vc, fxindexset, trace::TraceRawVcs, turbobail,
+};
 use turbo_tasks_fs::{File, FileContent, FileJsonContent, FileSystem, FileSystemPath, rope::Rope};
 use turbopack::module_options::RuleCondition;
 use turbopack_core::{
@@ -221,10 +223,10 @@ pub async fn pathname_for_path(
     let path = if let Some(path) = server_root.get_path_to(&server_path_value) {
         path
     } else {
-        bail!(
+        turbobail!(
             "server_path ({}) is not in server_root ({})",
-            server_path.value_to_string().await?,
-            server_root.value_to_string().await?
+            server_path,
+            server_root
         )
     };
     let path = match (path_ty, path) {

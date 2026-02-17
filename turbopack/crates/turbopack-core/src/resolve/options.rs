@@ -514,8 +514,10 @@ impl ValueToString for ImportMapResult {
             ImportMapResult::AliasExternal { .. } => Ok(Vc::cell(rcstr!("TODO external"))),
             ImportMapResult::Alias(request, context) => {
                 let s = if let Some(path) = context {
-                    let path = path.value_to_string().await?;
-                    turbofmt!("aliased to {} inside of {}", *request, path).await?
+                    turbofmt!(
+                        "aliased to {} inside of {path}", *request
+                    )
+                    .await?
                 } else {
                     turbofmt!("aliased to {}", *request).await?
                 };

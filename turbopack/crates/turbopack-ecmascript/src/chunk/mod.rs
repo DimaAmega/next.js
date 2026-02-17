@@ -10,7 +10,7 @@ use std::fmt::Write;
 
 use anyhow::Result;
 use turbo_rcstr::{RcStr, rcstr};
-use turbo_tasks::{ResolvedVc, TryJoinIterExt, ValueToString, Vc, turbofmt};
+use turbo_tasks::{ResolvedVc, TryJoinIterExt, ValueToString, Vc};
 use turbo_tasks_fs::FileSystem;
 use turbopack_core::{
     chunk::{Chunk, ChunkItem, ChunkItems, ChunkingContext, ModuleIds},

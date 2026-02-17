@@ -1,8 +1,8 @@
 use std::{env, sync::MutexGuard};
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Context, Result};
 use turbo_rcstr::RcStr;
-use turbo_tasks::{FxIndexMap, ReadRef, ResolvedVc, Vc};
+use turbo_tasks::{FxIndexMap, ReadRef, ResolvedVc, Vc, turbofmt};
 use turbo_tasks_fs::{FileContent, FileSystemPath};
 
 use crate::{EnvMap, GLOBAL_ENV_LOCK, ProcessEnv, sorted_env_vars};
@@ -59,10 +59,13 @@ impl DotenvProcessEnv {
             }
 
             if let Err(e) = res {
-                return Err(e).context(anyhow!(
-                    "unable to read {} for env vars",
-                    self.path.value_to_string().await?
-                ));
+                return Err(e).context(
+                    turbofmt!(
+                        "unable to read {} for env vars",
+                        self.path.value_to_string()
+                    )
+                    .await?,
+                );
             }
 
             Ok(Vc::cell(vars))
