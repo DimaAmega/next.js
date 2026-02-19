@@ -67,9 +67,7 @@ impl<'a> Iterator for FormatIter<'a> {
                         &self.input[content_start..cp],
                         &self.input[cp..content_end],
                     )),
-                    None => Some(FormatPart::VarRef(
-                        &self.input[content_start..content_end],
-                    )),
+                    None => Some(FormatPart::VarRef(&self.input[content_start..content_end])),
                 }
             }
             b'}' => {
