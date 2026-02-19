@@ -110,10 +110,11 @@ fn is_captured_ident(name: &str) -> bool {
 fn extract_captured_variables(fmt: &str) -> Vec<String> {
     let mut vars = Vec::new();
     for part in FormatIter::new(fmt) {
-        if let FormatPart::VarRef(name) = part {
-            if is_captured_ident(name) && !vars.iter().any(|v: &String| v == name) {
-                vars.push(name.to_string());
-            }
+        if let FormatPart::VarRef(name) = part
+            && is_captured_ident(name)
+            && !vars.iter().any(|v: &String| v == name)
+        {
+            vars.push(name.to_string());
         }
     }
     vars
