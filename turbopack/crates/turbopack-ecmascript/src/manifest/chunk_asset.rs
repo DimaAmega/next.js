@@ -80,10 +80,7 @@ impl ManifestAsyncModule {
             let inner_module = this.inner;
             let batches = this
                 .module_graph
-                .module_batches(
-                    *this.chunking_context,
-                    this.chunking_context.batching_config(),
-                )
+                .module_batches(this.chunking_context.chunking_configs())
                 .await?;
             let module_or_batch = batches.get_entry(inner_module).await?;
             if let Some(chunkable_module_or_batch) =

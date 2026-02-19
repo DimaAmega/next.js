@@ -13,12 +13,12 @@ use serde::{Deserialize, Serialize};
 use tracing::Instrument;
 use turbo_prehash::BuildHasherExt;
 use turbo_tasks::{
-    FxIndexMap, FxIndexSet, NonLocalValue, ResolvedVc, TaskInput, TryJoinIterExt,
-    ValueToString, Vc, trace::TraceRawVcs,
+    FxIndexMap, FxIndexSet, NonLocalValue, ResolvedVc, TaskInput, TryJoinIterExt, ValueToString,
+    Vc, trace::TraceRawVcs,
 };
 
 use crate::{
-    chunk::{ChunkingContext, ChunkingType},
+    chunk::{ChunkingConfigs, ChunkingType},
     module::Module,
     module_graph::{
         GraphTraversalAction, ModuleGraph,
@@ -334,8 +334,7 @@ impl PreBatches {
 
 pub async fn compute_module_batches(
     module_graph: Vc<ModuleGraph>,
-    chunking_context: Vc<Box<dyn ChunkingContext>>,
-    _config: &BatchingConfig,
+    chunking_configs: ResolvedVc<ChunkingConfigs>,
 ) -> Result<Vc<ModuleBatchesGraph>> {
     let outer_span = tracing::info_span!(
         "compute module batches",
@@ -656,7 +655,7 @@ pub async fn compute_module_batches(
         // Now every module is only in one batch
 
         let mut edges_count = 0;
-        let chunking_config = chunking_context.chunking_configs().await?;
+        let chunking_config = chunking_configs.await?;
         let mut chunkable_modules = FxIndexSet::default();
         for prebatch in &pre_batches.batches {
             for item in &prebatch.items {

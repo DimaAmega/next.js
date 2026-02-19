@@ -643,21 +643,20 @@ impl ChunkingContext for NodeJsChunkingContext {
             Vc::upcast::<Box<dyn ChunkingContext>>(self)
                 .to_resolved()
                 .await?;
-        let module_graph = module_graph.to_resolved().await?;
         Ok(if self.await?.manifest_chunks {
             let manifest_asset = ManifestAsyncModule::new(
                 module,
-                *module_graph,
+                module_graph,
                 *chunking_context,
                 availability_info,
             )
             .to_resolved()
             .await?;
             let loader_module = ManifestLoaderModule::new(*manifest_asset);
-            ChunkItem::new(Vc::upcast(loader_module), *module_graph, *chunking_context)
+            ChunkItem::new(Vc::upcast(loader_module), module_graph, *chunking_context)
         } else {
             let module = AsyncLoaderModule::new(module, *chunking_context, availability_info);
-            ChunkItem::new(Vc::upcast(module), *module_graph, *chunking_context)
+            ChunkItem::new(Vc::upcast(module), module_graph, *chunking_context)
         })
     }
 

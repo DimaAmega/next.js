@@ -63,10 +63,7 @@ impl AsyncLoaderModule {
         if let Some(chunk_items) = self.availability_info.available_modules() {
             let inner_module = self.inner;
             let batches = module_graph
-                .module_batches(
-                    *self.chunking_context,
-                    self.chunking_context.batching_config(),
-                )
+                .module_batches(self.chunking_context.chunking_configs())
                 .await?;
             let module_or_batch = batches.get_entry(inner_module).await?;
             if let Some(chunkable_module_or_batch) =

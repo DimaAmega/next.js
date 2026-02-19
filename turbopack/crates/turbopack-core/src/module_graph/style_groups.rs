@@ -77,7 +77,7 @@ pub async fn compute_style_groups(
 ) -> Result<Vc<StyleGroups>> {
     let chunk_group_info = module_graph.chunk_group_info().await?;
     let batches_graph = module_graph
-        .module_batches(chunking_context, chunking_context.batching_config())
+        .module_batches(chunking_context.chunking_configs())
         .await?;
     let async_info = module_graph.async_module_info().await?;
     let mut module_info_map: FxIndexMap<ResolvedVc<Box<dyn Module>>, Option<ModuleInfo>> =

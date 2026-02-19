@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use turbo_rcstr::{RcStr, rcstr};
 use turbo_tasks::{ResolvedVc, TryFlatJoinIterExt, TryJoinIterExt, Vc};
 use turbo_tasks_env::ProcessEnv;
@@ -171,7 +171,11 @@ pub async fn create_web_entry_source(
         .map(|module| async move {
             let chunk_item = ChunkItem::new(*module, *module_graph, *chunking_context)
                 .to_resolved()
-                .await?;
+                .await
+                .context(
+                    "Entry module is not chunkable, so it can't be used to bootstrap the \
+                     application",
+                )?;
             if let Some(entry) = ResolvedVc::try_sidecast::<Box<dyn EvaluatableAsset>>(module) {
                 Ok(DevHtmlEntry {
                     chunk_item,

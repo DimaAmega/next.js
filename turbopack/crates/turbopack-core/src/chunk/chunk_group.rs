@@ -11,7 +11,7 @@ use super::{
 };
 use crate::{
     chunk::{
-        ChunkingType, Chunks,
+        ChunkingConfigs, ChunkingType, Chunks,
         available_modules::AvailableModuleItem,
         chunk_item_batch::{ChunkItemBatchGroup, ChunkItemOrBatchWithAsyncModuleInfo},
     },
@@ -24,7 +24,7 @@ use crate::{
             ChunkableModuleBatchGroup, ChunkableModuleOrBatch, ModuleBatch, ModuleBatchGroup,
             ModuleOrBatch,
         },
-        module_batches::{BatchingConfig, ModuleBatchesGraphEdge},
+        module_batches::ModuleBatchesGraphEdge,
     },
     output::{
         OutputAsset, OutputAssets, OutputAssetsReference, OutputAssetsReferences,
@@ -60,7 +60,7 @@ pub async fn make_chunk_group(
         .await?;
     let should_trace = *chunking_context.is_tracing_enabled().await?;
     let should_merge_modules = *chunking_context.is_module_merging_enabled().await?;
-    let batching_config = chunking_context.batching_config();
+    let chunking_configs = chunking_context.chunking_configs();
 
     let ChunkGroupContent {
         chunkable_items,
@@ -76,8 +76,7 @@ pub async fn make_chunk_group(
             can_split_async,
             should_trace,
             should_merge_modules,
-            chunking_context: *chunking_context,
-            batching_config,
+            chunking_configs,
         },
     )
     .await?;
@@ -203,10 +202,8 @@ pub struct ChunkGroupContentOptions {
     pub should_trace: bool,
     /// Whether module merging is enabled
     pub should_merge_modules: bool,
-    /// The chunking context
-    pub chunking_context: Vc<Box<dyn ChunkingContext>>,
-    /// The batching config to use
-    pub batching_config: Vc<BatchingConfig>,
+    /// The chunking configs
+    pub chunking_configs: Vc<ChunkingConfigs>,
 }
 
 /// Computes the content of a chunk group.
@@ -220,13 +217,10 @@ pub async fn chunk_group_content(
         can_split_async,
         should_trace,
         should_merge_modules,
-        chunking_context,
-        batching_config,
+        chunking_configs,
     }: ChunkGroupContentOptions,
 ) -> Result<ChunkGroupContent> {
-    let module_batches_graph = module_graph
-        .module_batches(chunking_context, batching_config)
-        .await?;
+    let module_batches_graph = module_graph.module_batches(chunking_configs).await?;
 
     type ModuleToChunkableMap = FxHashMap<ModuleOrBatch, ChunkableModuleOrBatch>;
 

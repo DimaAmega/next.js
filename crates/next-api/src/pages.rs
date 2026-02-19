@@ -44,8 +44,8 @@ use turbopack::{
 use turbopack_core::{
     asset::AssetContent,
     chunk::{
-        ChunkGroupResult, ChunkingContext, ChunkingContextExt,
-        EvaluatableAsset, EvaluatableAssets, availability_info::AvailabilityInfo,
+        ChunkGroupResult, ChunkingContext, ChunkingContextExt, EvaluatableAsset, EvaluatableAssets,
+        availability_info::AvailabilityInfo,
     },
     context::AssetContext,
     file_source::FileSource,
