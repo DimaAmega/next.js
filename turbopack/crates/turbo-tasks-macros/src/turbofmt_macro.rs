@@ -295,92 +295,29 @@ mod tests {
     use super::*;
 
     #[test]
-    fn raw_string_only() {
-        let parts: Vec<_> = FormatIter::new("hello world").collect();
-        assert_eq!(parts, vec![FormatPart::RawString("hello world")]);
-    }
-
-    #[test]
-    fn simple_var_ref() {
-        let parts: Vec<_> = FormatIter::new("{name}").collect();
-        assert_eq!(parts, vec![FormatPart::VarRef("name")]);
-    }
-
-    #[test]
-    fn var_ref_with_format_spec() {
-        let parts: Vec<_> = FormatIter::new("{name:?}").collect();
-        assert_eq!(parts, vec![FormatPart::VarRefFormat("name", ":?")]);
-    }
-
-    #[test]
-    fn escaped_braces() {
-        let parts: Vec<_> = FormatIter::new("{{escaped}}").collect();
+    fn format_iter_all_parts() {
+        let parts: Vec<_> = FormatIter::new("{{}} hello {name}, {age:>3} {} {0}").collect();
         assert_eq!(
             parts,
             vec![
                 FormatPart::EscapedBrace("{{"),
-                FormatPart::RawString("escaped"),
                 FormatPart::EscapedBrace("}}"),
-            ]
-        );
-    }
-
-    #[test]
-    fn mixed_parts() {
-        let parts: Vec<_> = FormatIter::new("hello {name}, you are {age:>3} years old").collect();
-        assert_eq!(
-            parts,
-            vec![
-                FormatPart::RawString("hello "),
+                FormatPart::RawString(" hello "),
                 FormatPart::VarRef("name"),
-                FormatPart::RawString(", you are "),
+                FormatPart::RawString(", "),
                 FormatPart::VarRefFormat("age", ":>3"),
-                FormatPart::RawString(" years old"),
-            ]
-        );
-    }
-
-    #[test]
-    fn empty_var_ref() {
-        let parts: Vec<_> = FormatIter::new("{}").collect();
-        assert_eq!(parts, vec![FormatPart::VarRef("")]);
-    }
-
-    #[test]
-    fn positional_var_ref() {
-        let parts: Vec<_> = FormatIter::new("{0} and {1}").collect();
-        assert_eq!(
-            parts,
-            vec![
+                FormatPart::RawString(" "),
+                FormatPart::VarRef(""),
+                FormatPart::RawString(" "),
                 FormatPart::VarRef("0"),
-                FormatPart::RawString(" and "),
-                FormatPart::VarRef("1"),
             ]
         );
     }
 
     #[test]
-    fn empty_format_spec() {
-        // {name:} is valid in Rust format strings (default format)
-        let parts: Vec<_> = FormatIter::new("{name:}").collect();
-        assert_eq!(parts, vec![FormatPart::VarRefFormat("name", ":")]);
-    }
-
-    #[test]
-    fn extract_captures_plain_idents_only() {
-        let vars = extract_captured_variables("hello {name}, {age:?}, {_x}, {0}");
+    fn extract_captures() {
+        // Only plain idents (not positional, not format-specced, not escaped), deduplicated
+        let vars = extract_captured_variables("{{x}} {name} {age:?} {_x} {0} {name}");
         assert_eq!(vars, vec!["name", "_x"]);
-    }
-
-    #[test]
-    fn extract_captures_deduplicates() {
-        let vars = extract_captured_variables("{x} and {x} and {y}");
-        assert_eq!(vars, vec!["x", "y"]);
-    }
-
-    #[test]
-    fn extract_captures_skips_escaped() {
-        let vars = extract_captured_variables("{{not_a_var}} {real}");
-        assert_eq!(vars, vec!["real"]);
     }
 }

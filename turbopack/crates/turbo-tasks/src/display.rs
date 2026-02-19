@@ -56,6 +56,12 @@ impl AsRef<str> for StringifyType {
     }
 }
 
+impl fmt::Debug for StringifyType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(self.as_ref(), f)
+    }
+}
+
 impl Display for StringifyType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(self.as_ref())
