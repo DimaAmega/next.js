@@ -711,10 +711,7 @@ pub async fn project_update(
     let container = project.container;
 
     ctx.turbo_tasks()
-        .run(async move {
-            let _ = container.update(options).await?;
-            Ok(())
-        })
+        .run(async move { container.update(options).await })
         .or_else(|e| ctx.throw_turbopack_internal_result(&e.into()))
         .await
 }
@@ -1356,8 +1353,8 @@ pub async fn project_write_all_entrypoints_to_disk(
                         .await?;
 
                 Ok(compute_deferred_phase_build_paths(
-                    &entrypoints,
-                    &deferred_entries,
+                    entrypoints,
+                    deferred_entries,
                 ))
             })
             .or_else(|e| ctx.throw_turbopack_internal_result(&e.into()))
