@@ -6,9 +6,7 @@ use turbo_tasks_fs::FileSystemPath;
 use turbopack_browser::{BrowserChunkingContext, react_refresh::assert_can_resolve_react_refresh};
 use turbopack_cli_utils::runtime_entry::{RuntimeEntries, RuntimeEntry};
 use turbopack_core::{
-    chunk::{
-        ChunkableModule, ChunkingContext, EvaluatableAsset, SourceMapSourceType, SourceMapsType,
-    },
+    chunk::{ChunkType, ChunkingContext, EvaluatableAsset, SourceMapSourceType, SourceMapsType},
     environment::Environment,
     file_source::FileSource,
     module::Module,
@@ -171,33 +169,39 @@ pub async fn create_web_entry_source(
     let entries: Vec<_> = entries
         .into_iter()
         .map(|module| async move {
-            if let (Some(chunkable_module), Some(entry)) = (
-                ResolvedVc::try_sidecast::<Box<dyn ChunkableModule>>(module),
-                ResolvedVc::try_sidecast::<Box<dyn EvaluatableAsset>>(module),
-            ) {
+            let mut is_chunkable = false;
+            {
+                let configs = chunking_context.chunking_configs().await?;
+                for (chunk_type, _) in configs.iter() {
+                    if *chunk_type.accepts_module(*module).await? {
+                        is_chunkable = true;
+                        break;
+                    }
+                }
+            }
+            if !is_chunkable {
+                // TODO convert into a serve-able asset
+                return Err(anyhow!(
+                    "Entry module is not chunkable, so it can't be used to bootstrap the \
+                     application"
+                ));
+            }
+            if let Some(entry) = ResolvedVc::try_sidecast::<Box<dyn EvaluatableAsset>>(module) {
                 Ok(DevHtmlEntry {
-                    chunkable_module,
+                    chunkable_module: module,
                     module_graph,
                     chunking_context,
                     runtime_entries: Some(runtime_entries.with_entry(*entry).to_resolved().await?),
                 })
-            } else if let Some(chunkable_module) =
-                ResolvedVc::try_sidecast::<Box<dyn ChunkableModule>>(module)
-            {
+            } else {
                 // TODO this is missing runtime code, so it's probably broken and we should also
                 // add an ecmascript chunk with the runtime code
                 Ok(DevHtmlEntry {
-                    chunkable_module,
+                    chunkable_module: module,
                     module_graph,
                     chunking_context,
                     runtime_entries: None,
                 })
-            } else {
-                // TODO convert into a serve-able asset
-                Err(anyhow!(
-                    "Entry module is not chunkable, so it can't be used to bootstrap the \
-                     application"
-                ))
             }
         })
         .try_join()

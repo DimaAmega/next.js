@@ -13,7 +13,7 @@ use turbo_rcstr::{RcStr, rcstr};
 use turbo_tasks::{ResolvedVc, TryJoinIterExt, ValueToString, Vc};
 use turbo_tasks_fs::FileSystem;
 use turbopack_core::{
-    chunk::{Chunk, ChunkItem, ChunkItems, ChunkingContext, ModuleIds},
+    chunk::{Chunk, ChunkItems, ChunkingContext, ModuleIds},
     ident::AssetIdent,
     introspect::{
         Introspectable, IntrospectableChildren, module::IntrospectableModule,
@@ -33,8 +33,8 @@ pub use self::{
     content::EcmascriptChunkContent,
     data::EcmascriptChunkData,
     item::{
-        EcmascriptChunkItem, EcmascriptChunkItemContent, EcmascriptChunkItemExt,
-        EcmascriptChunkItemOptions, EcmascriptChunkItemWithAsyncInfo, ecmascript_chunk_item,
+        EcmascriptChunkItemContent, EcmascriptChunkItemOptions, EcmascriptChunkItemWithAsyncInfo,
+        ecmascript_chunk_item_code,
     },
     placeable::{EcmascriptChunkPlaceable, EcmascriptExports},
 };
@@ -75,7 +75,7 @@ impl OutputAssetsReference for EcmascriptChunk {
             .chunk_items
             .iter()
             .map(async |with_info| {
-                let r = with_info.references().await?;
+                let r = with_info.references().await?.await?;
                 Ok((
                     r.assets.await?,
                     r.referenced_assets.await?,

@@ -16,7 +16,7 @@ use turbo_tasks::{
     trace::TraceRawVcs,
 };
 use turbopack_core::{
-    chunk::{ChunkableModule, ChunkingContext, ModuleChunkItemIdExt, ModuleId},
+    chunk::{ChunkingContext, ModuleChunkItemIdExt, ModuleId},
     issue::{
         Issue, IssueExt, IssueSeverity, StyledString, code_gen::CodeGenerationIssue,
         module::emit_unknown_module_type_error,
@@ -28,6 +28,7 @@ use turbopack_core::{
 };
 
 use crate::{
+    chunk::EcmascriptChunkPlaceable,
     references::util::{
         request_to_string, throw_module_not_found_error_expr, throw_module_not_found_expr,
         throw_module_not_found_expr_async,
@@ -355,10 +356,10 @@ async fn to_single_pattern_mapping(
             return Ok(SinglePatternMapping::Invalid);
         }
     };
-    if let Some(chunkable) = ResolvedVc::try_downcast::<Box<dyn ChunkableModule>>(module) {
+    if ResolvedVc::try_sidecast::<Box<dyn EcmascriptChunkPlaceable>>(module).is_some() {
         match resolve_type {
             ResolveType::AsyncChunkLoader => {
-                let ident = chunking_context.async_loader_chunk_item_ident(*chunkable);
+                let ident = chunking_context.async_loader_chunk_item_ident(*module);
                 let loader_id = chunking_context
                     .chunk_item_id_strategy()
                     .await?
@@ -367,7 +368,7 @@ async fn to_single_pattern_mapping(
                 return Ok(SinglePatternMapping::ModuleLoader(loader_id));
             }
             ResolveType::ChunkItem => {
-                let item_id = chunkable.chunk_item_id(chunking_context).await?;
+                let item_id = module.chunk_item_id(chunking_context).await?;
                 return Ok(SinglePatternMapping::Module(item_id));
             }
         }

@@ -11,7 +11,8 @@ use turbo_tasks::{
 };
 
 use crate::{
-    chunk::{ChunkItem, ChunkItemWithAsyncModuleInfo, ChunkType, ChunkableModule, ChunkingContext},
+    chunk::{ChunkItem, ChunkItemWithAsyncModuleInfo, ChunkType, ChunkingContext},
+    module::Module,
     module_graph::{
         ModuleGraph,
         async_module_info::AsyncModulesInfo,
@@ -21,24 +22,22 @@ use crate::{
 };
 
 pub async fn attach_async_info_to_chunkable_module(
-    module: ResolvedVc<Box<dyn ChunkableModule>>,
+    module: ResolvedVc<Box<dyn Module>>,
     async_module_info: &ReadRef<AsyncModulesInfo>,
     module_graph: Vc<ModuleGraph>,
     chunking_context: Vc<Box<dyn ChunkingContext>>,
 ) -> Result<ChunkItemWithAsyncModuleInfo> {
-    let general_module = ResolvedVc::upcast(module);
-    let async_info = if async_module_info.contains(&general_module) {
+    let async_info = if async_module_info.contains(&module) {
         Some(
             module_graph
-                .referenced_async_modules(*general_module)
+                .referenced_async_modules(*module)
                 .to_resolved()
                 .await?,
         )
     } else {
         None
     };
-    let chunk_item = module
-        .as_chunk_item(module_graph, chunking_context)
+    let chunk_item = ChunkItem::new(*module, module_graph, chunking_context)
         .to_resolved()
         .await?;
     Ok(ChunkItemWithAsyncModuleInfo {

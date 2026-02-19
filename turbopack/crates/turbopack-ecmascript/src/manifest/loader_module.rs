@@ -5,10 +5,7 @@ use indoc::writedoc;
 use turbo_rcstr::{RcStr, rcstr};
 use turbo_tasks::{ResolvedVc, TryJoinIterExt, Vc};
 use turbopack_core::{
-    chunk::{
-        AsyncModuleInfo, ChunkData, ChunkableModule, ChunkingContext, ChunksData,
-        ModuleChunkItemIdExt,
-    },
+    chunk::{AsyncModuleInfo, ChunkData, ChunkingContext, ChunksData, ModuleChunkItemIdExt},
     ident::AssetIdent,
     module::{Module, ModuleSideEffects},
     module_graph::ModuleGraph,
@@ -20,7 +17,7 @@ use super::chunk_asset::ManifestAsyncModule;
 use crate::{
     chunk::{
         EcmascriptChunkItemContent, EcmascriptChunkPlaceable, EcmascriptExports,
-        data::EcmascriptChunkData, ecmascript_chunk_item,
+        data::EcmascriptChunkData,
     },
     runtime_functions::{TURBOPACK_EXPORT_VALUE, TURBOPACK_LOAD, TURBOPACK_REQUIRE},
     utils::{StringifyJs, StringifyModuleId},
@@ -68,7 +65,7 @@ impl ManifestLoaderModule {
     }
 
     #[turbo_tasks::function]
-    pub fn asset_ident_for(module: Vc<Box<dyn ChunkableModule>>) -> Vc<AssetIdent> {
+    pub fn asset_ident_for(module: Vc<Box<dyn Module>>) -> Vc<AssetIdent> {
         module.ident().with_modifier(modifier())
     }
 }
@@ -93,18 +90,6 @@ impl Module for ManifestLoaderModule {
     #[turbo_tasks::function]
     fn side_effects(self: Vc<Self>) -> Vc<ModuleSideEffects> {
         ModuleSideEffects::SideEffectFree.cell()
-    }
-}
-
-#[turbo_tasks::value_impl]
-impl ChunkableModule for ManifestLoaderModule {
-    #[turbo_tasks::function]
-    fn as_chunk_item(
-        self: ResolvedVc<Self>,
-        module_graph: ResolvedVc<ModuleGraph>,
-        chunking_context: ResolvedVc<Box<dyn ChunkingContext>>,
-    ) -> Vc<Box<dyn turbopack_core::chunk::ChunkItem>> {
-        ecmascript_chunk_item(ResolvedVc::upcast(self), module_graph, chunking_context)
     }
 }
 
@@ -194,7 +179,7 @@ impl EcmascriptChunkPlaceable for ManifestLoaderModule {
     }
 
     #[turbo_tasks::function]
-    fn chunk_item_output_assets(
+    async fn chunk_item_output_assets(
         &self,
         _chunking_context: Vc<Box<dyn ChunkingContext>>,
         _module_graph: Vc<ModuleGraph>,

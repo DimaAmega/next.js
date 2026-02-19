@@ -44,8 +44,8 @@ use turbopack::{
 use turbopack_core::{
     asset::AssetContent,
     chunk::{
-        ChunkGroupResult, ChunkingContext, ChunkingContextExt, EvaluatableAsset, EvaluatableAssets,
-        availability_info::AvailabilityInfo,
+        ChunkGroupResult, ChunkType, ChunkingContext, ChunkingContextExt, EvaluatableAsset,
+        EvaluatableAssets, availability_info::AvailabilityInfo,
     },
     context::AssetContext,
     file_source::FileSource,
@@ -658,14 +658,32 @@ impl PageEndpoint {
             self.source(),
             this.pathname.clone(),
         );
+        let is_chunkable = {
+            let page_loader_resolved = page_loader.to_resolved().await?;
+            let configs = this
+                .pages_project
+                .project()
+                .client_chunking_context()
+                .chunking_configs()
+                .await?;
+            let mut chunkable = false;
+            for (chunk_type, _) in configs.iter() {
+                if *chunk_type.accepts_module(*page_loader_resolved).await? {
+                    chunkable = true;
+                    break;
+                }
+            }
+            chunkable
+        };
         if matches!(
             *this.pages_project.project().next_mode().await?,
             NextMode::Development
-        ) && let Some(chunkable) = ResolvedVc::try_downcast(page_loader.to_resolved().await?)
+        ) && is_chunkable
         {
+            let module = page_loader.to_resolved().await?;
             return Ok(Vc::upcast(HmrEntryModule::new(
                 AssetIdent::from_path(this.page.await?.base_path.clone()),
-                *chunkable,
+                *module,
             )));
         }
         Ok(page_loader)

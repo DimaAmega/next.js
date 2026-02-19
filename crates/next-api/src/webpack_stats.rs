@@ -25,8 +25,7 @@ where
 {
     let mut assets = vec![];
     let mut chunks = vec![];
-    let mut chunk_items: FxIndexMap<Vc<Box<dyn ChunkItem>>, FxIndexSet<RcStr>> =
-        FxIndexMap::default();
+    let mut chunk_items: FxIndexMap<Vc<ChunkItem>, FxIndexSet<RcStr>> = FxIndexMap::default();
 
     let entry_assets = entry_assets.into_iter().collect::<Vec<_>>();
 

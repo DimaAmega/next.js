@@ -7,8 +7,8 @@ use turbo_tasks_fs::{FileSystem, VirtualFileSystem, rope::RopeBuilder};
 use turbopack_core::{
     asset::{Asset, AssetContent},
     chunk::{
-        AsyncModuleInfo, ChunkItem, ChunkableModule, ChunkingContext, ChunkingType,
-        ChunkingTypeOption, EvaluatableAsset,
+        AsyncModuleInfo, ChunkItem, ChunkingContext, ChunkingType, ChunkingTypeOption,
+        EvaluatableAsset,
     },
     ident::AssetIdent,
     module::{Module, ModuleSideEffects},
@@ -20,7 +20,7 @@ use turbopack_core::{
 use turbopack_ecmascript::{
     chunk::{
         EcmascriptChunkItemContent, EcmascriptChunkItemOptions, EcmascriptChunkPlaceable,
-        EcmascriptExports, ecmascript_chunk_item,
+        EcmascriptExports,
     },
     runtime_functions::TURBOPACK_REQUIRE,
     utils::StringifyJs,
@@ -41,16 +41,13 @@ async fn hmr_entry_point_base_ident() -> Result<Vc<AssetIdent>> {
 #[turbo_tasks::value(shared)]
 pub struct HmrEntryModule {
     pub ident: ResolvedVc<AssetIdent>,
-    pub module: ResolvedVc<Box<dyn ChunkableModule>>,
+    pub module: ResolvedVc<Box<dyn Module>>,
 }
 
 #[turbo_tasks::value_impl]
 impl HmrEntryModule {
     #[turbo_tasks::function]
-    pub fn new(
-        ident: ResolvedVc<AssetIdent>,
-        module: ResolvedVc<Box<dyn ChunkableModule>>,
-    ) -> Vc<Self> {
+    pub fn new(ident: ResolvedVc<AssetIdent>, module: ResolvedVc<Box<dyn Module>>) -> Vc<Self> {
         Self { ident, module }.cell()
     }
 }
@@ -70,7 +67,7 @@ impl Module for HmrEntryModule {
     #[turbo_tasks::function]
     async fn references(&self) -> Result<Vc<ModuleReferences>> {
         Ok(Vc::cell(vec![ResolvedVc::upcast(
-            HmrEntryModuleReference::new(Vc::upcast(*self.module))
+            HmrEntryModuleReference::new(*self.module)
                 .to_resolved()
                 .await?,
         )]))
@@ -78,18 +75,6 @@ impl Module for HmrEntryModule {
     #[turbo_tasks::function]
     fn side_effects(self: Vc<Self>) -> Vc<ModuleSideEffects> {
         ModuleSideEffects::SideEffectful.cell()
-    }
-}
-
-#[turbo_tasks::value_impl]
-impl ChunkableModule for HmrEntryModule {
-    #[turbo_tasks::function]
-    fn as_chunk_item(
-        self: ResolvedVc<Self>,
-        module_graph: ResolvedVc<ModuleGraph>,
-        chunking_context: ResolvedVc<Box<dyn ChunkingContext>>,
-    ) -> Vc<Box<dyn ChunkItem>> {
-        ecmascript_chunk_item(ResolvedVc::upcast(self), module_graph, chunking_context)
     }
 }
 
@@ -118,7 +103,7 @@ impl EcmascriptChunkPlaceable for HmrEntryModule {
     ) -> Result<Vc<EcmascriptChunkItemContent>> {
         let this = self.await?;
         let module = this.module;
-        let chunk_item = module.as_chunk_item(module_graph, chunking_context);
+        let chunk_item = ChunkItem::new(*module, module_graph, chunking_context);
         let id = chunking_context
             .chunk_item_id_strategy()
             .await?

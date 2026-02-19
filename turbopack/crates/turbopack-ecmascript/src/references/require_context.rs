@@ -22,8 +22,8 @@ use turbo_tasks::{
 use turbo_tasks_fs::{DirectoryContent, DirectoryEntry, FileSystemPath};
 use turbopack_core::{
     chunk::{
-        AsyncModuleInfo, ChunkableModule, ChunkingContext, ChunkingType, ChunkingTypeOption,
-        MinifyType, ModuleChunkItemIdExt,
+        AsyncModuleInfo, ChunkingContext, ChunkingType, ChunkingTypeOption, MinifyType,
+        ModuleChunkItemIdExt,
     },
     ident::AssetIdent,
     issue::IssueSource,
@@ -38,7 +38,7 @@ use turbopack_resolve::ecmascript::cjs_resolve;
 
 use crate::{
     EcmascriptChunkPlaceable,
-    chunk::{EcmascriptChunkItemContent, EcmascriptExports, ecmascript_chunk_item},
+    chunk::{EcmascriptChunkItemContent, EcmascriptExports},
     code_gen::{CodeGen, CodeGeneration, IntoCodeGenReference},
     create_visitor,
     references::{
@@ -432,18 +432,6 @@ impl Module for RequireContextAsset {
     #[turbo_tasks::function]
     fn side_effects(self: Vc<Self>) -> Vc<ModuleSideEffects> {
         ModuleSideEffects::SideEffectFree.cell()
-    }
-}
-
-#[turbo_tasks::value_impl]
-impl ChunkableModule for RequireContextAsset {
-    #[turbo_tasks::function]
-    fn as_chunk_item(
-        self: ResolvedVc<Self>,
-        module_graph: ResolvedVc<ModuleGraph>,
-        chunking_context: ResolvedVc<Box<dyn ChunkingContext>>,
-    ) -> Vc<Box<dyn turbopack_core::chunk::ChunkItem>> {
-        ecmascript_chunk_item(ResolvedVc::upcast(self), module_graph, chunking_context)
     }
 }
 

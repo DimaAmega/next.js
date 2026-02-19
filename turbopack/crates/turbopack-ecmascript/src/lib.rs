@@ -83,9 +83,9 @@ use turbo_tasks::{
 use turbo_tasks_fs::{FileJsonContent, FileSystemPath, glob::Glob, rope::Rope};
 use turbopack_core::{
     chunk::{
-        AsyncModuleInfo, ChunkItem, ChunkableModule, ChunkingContext, EvaluatableAsset,
-        MergeableModule, MergeableModuleExposure, MergeableModules, MergeableModulesExposed,
-        MinifyType, ModuleChunkItemIdExt, ModuleId,
+        AsyncModuleInfo, ChunkingContext, EvaluatableAsset, MergeableModule,
+        MergeableModuleExposure, MergeableModules, MergeableModulesExposed, MinifyType,
+        ModuleChunkItemIdExt, ModuleId,
     },
     compile_time_info::CompileTimeInfo,
     context::AssetContext,
@@ -106,7 +106,6 @@ use crate::{
     analyzer::graph::EvalContext,
     chunk::{
         EcmascriptChunkItemContent, EcmascriptChunkPlaceable, EcmascriptExports,
-        ecmascript_chunk_item,
         placeable::{SideEffectsDeclaration, get_side_effect_free_declaration},
     },
     code_gen::{CodeGeneration, CodeGenerationHoistedStmt, CodeGens, ModifiableAst},
@@ -782,18 +781,6 @@ impl Module for EcmascriptModuleAsset {
 }
 
 #[turbo_tasks::value_impl]
-impl ChunkableModule for EcmascriptModuleAsset {
-    #[turbo_tasks::function]
-    fn as_chunk_item(
-        self: ResolvedVc<Self>,
-        module_graph: ResolvedVc<ModuleGraph>,
-        chunking_context: ResolvedVc<Box<dyn ChunkingContext>>,
-    ) -> Vc<Box<dyn ChunkItem>> {
-        ecmascript_chunk_item(ResolvedVc::upcast(self), module_graph, chunking_context)
-    }
-}
-
-#[turbo_tasks::value_impl]
 impl EcmascriptChunkPlaceable for EcmascriptModuleAsset {
     #[turbo_tasks::function]
     async fn get_exports(self: Vc<Self>) -> Result<Vc<EcmascriptExports>> {
@@ -848,7 +835,7 @@ impl MergeableModule for EcmascriptModuleAsset {
         self: Vc<Self>,
         modules: Vc<MergeableModulesExposed>,
         entry_points: Vc<MergeableModules>,
-    ) -> Result<Vc<Box<dyn ChunkableModule>>> {
+    ) -> Result<Vc<Box<dyn Module>>> {
         Ok(Vc::upcast(
             *MergedEcmascriptModule::new(
                 modules,

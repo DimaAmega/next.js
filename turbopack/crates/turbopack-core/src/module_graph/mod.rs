@@ -782,9 +782,10 @@ impl ModuleGraph {
     #[turbo_tasks::function]
     pub async fn module_batches(
         self: Vc<Self>,
+        chunking_context: Vc<Box<dyn ChunkingContext>>,
         config: Vc<BatchingConfig>,
     ) -> Result<Vc<ModuleBatchesGraph>> {
-        compute_module_batches(self, &*config.await?).await
+        compute_module_batches(self, chunking_context, &*config.await?).await
     }
 
     #[turbo_tasks::function]

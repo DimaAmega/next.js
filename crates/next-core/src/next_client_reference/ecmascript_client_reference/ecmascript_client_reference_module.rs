@@ -7,10 +7,7 @@ use turbo_tasks::{IntoTraitRef, ResolvedVc, ValueToString, Vc};
 use turbo_tasks_fs::{File, FileContent};
 use turbopack_core::{
     asset::AssetContent,
-    chunk::{
-        AsyncModuleInfo, ChunkGroupType, ChunkItem, ChunkableModule, ChunkingContext, ChunkingType,
-        ChunkingTypeOption,
-    },
+    chunk::{AsyncModuleInfo, ChunkGroupType, ChunkingContext, ChunkingType, ChunkingTypeOption},
     code_builder::CodeBuilder,
     context::AssetContext,
     ident::AssetIdent,
@@ -23,10 +20,7 @@ use turbopack_core::{
     virtual_source::VirtualSource,
 };
 use turbopack_ecmascript::{
-    chunk::{
-        EcmascriptChunkItemContent, EcmascriptChunkPlaceable, EcmascriptExports,
-        ecmascript_chunk_item,
-    },
+    chunk::{EcmascriptChunkItemContent, EcmascriptChunkPlaceable, EcmascriptExports},
     runtime_functions::TURBOPACK_EXPORT_NAMESPACE,
     utils::StringifyJs,
 };
@@ -249,22 +243,6 @@ impl Module for EcmascriptClientReferenceModule {
 }
 
 #[turbo_tasks::value_impl]
-impl ChunkableModule for EcmascriptClientReferenceModule {
-    #[turbo_tasks::function]
-    async fn as_chunk_item(
-        self: ResolvedVc<Self>,
-        module_graph: Vc<ModuleGraph>,
-        chunking_context: ResolvedVc<Box<dyn ChunkingContext>>,
-    ) -> Result<Vc<Box<dyn ChunkItem>>> {
-        Ok(ecmascript_chunk_item(
-            ResolvedVc::upcast(self),
-            module_graph.to_resolved().await?,
-            chunking_context,
-        ))
-    }
-}
-
-#[turbo_tasks::value_impl]
 impl EcmascriptChunkPlaceable for EcmascriptClientReferenceModule {
     #[turbo_tasks::function]
     fn get_exports(self: Vc<Self>) -> Vc<EcmascriptExports> {
@@ -279,8 +257,12 @@ impl EcmascriptChunkPlaceable for EcmascriptClientReferenceModule {
         async_module_info: Option<Vc<AsyncModuleInfo>>,
         estimated: bool,
     ) -> Vc<EcmascriptChunkItemContent> {
-        self.proxy_module()
-            .chunk_item_content(chunking_context, module_graph, async_module_info, estimated)
+        self.proxy_module().chunk_item_content(
+            chunking_context,
+            module_graph,
+            async_module_info,
+            estimated,
+        )
     }
 }
 

@@ -10,8 +10,7 @@ use turbo_tasks_hash::{Xxh3Hash64Hasher, encode_hex};
 use turbopack_core::{
     asset::{Asset, AssetContent},
     chunk::{
-        ChunkableModule, ChunkingContext, ChunkingContextExt, EvaluatableAssets,
-        availability_info::AvailabilityInfo,
+        ChunkingContext, ChunkingContextExt, EvaluatableAssets, availability_info::AvailabilityInfo,
     },
     module::Module,
     module_graph::{ModuleGraph, chunk_group_info::ChunkGroup},
@@ -23,7 +22,7 @@ use turbopack_core::{
     Clone, Debug, Eq, Hash, NonLocalValue, PartialEq, TaskInput, TraceRawVcs, Encode, Decode,
 )]
 pub struct DevHtmlEntry {
-    pub chunkable_module: ResolvedVc<Box<dyn ChunkableModule>>,
+    pub chunkable_module: ResolvedVc<Box<dyn Module>>,
     pub module_graph: ResolvedVc<ModuleGraph>,
     pub chunking_context: ResolvedVc<Box<dyn ChunkingContext>>,
     pub runtime_entries: Option<ResolvedVc<EvaluatableAssets>>,
@@ -170,7 +169,7 @@ impl DevHtmlAsset {
                     chunking_context
                         .root_chunk_group_assets(
                             chunkable_module.ident(),
-                            ChunkGroup::Entry(vec![ResolvedVc::upcast(chunkable_module)]),
+                            ChunkGroup::Entry(vec![chunkable_module]),
                             *module_graph,
                         )
                         .await?

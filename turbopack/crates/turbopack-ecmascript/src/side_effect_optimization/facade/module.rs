@@ -4,8 +4,8 @@ use anyhow::{Result, bail};
 use turbo_tasks::{ResolvedVc, Vc};
 use turbopack_core::{
     chunk::{
-        AsyncModuleInfo, ChunkableModule, ChunkingContext, EvaluatableAsset, MergeableModule,
-        MergeableModules, MergeableModulesExposed,
+        AsyncModuleInfo, ChunkingContext, EvaluatableAsset, MergeableModule, MergeableModules,
+        MergeableModulesExposed,
     },
     ident::AssetIdent,
     module::{Module, ModuleSideEffects},
@@ -18,10 +18,7 @@ use crate::{
     AnalyzeEcmascriptModuleResult, EcmascriptAnalyzable, EcmascriptAnalyzableExt,
     EcmascriptModuleContent, EcmascriptModuleContentOptions, EcmascriptOptions,
     MergedEcmascriptModule, SpecifiedModuleType,
-    chunk::{
-        EcmascriptChunkItemContent, EcmascriptChunkPlaceable, EcmascriptExports,
-        ecmascript_chunk_item,
-    },
+    chunk::{EcmascriptChunkItemContent, EcmascriptChunkPlaceable, EcmascriptExports},
     code_gen::CodeGens,
     export::Liveness,
     references::{
@@ -368,18 +365,6 @@ impl EcmascriptChunkPlaceable for EcmascriptModuleFacadeModule {
 }
 
 #[turbo_tasks::value_impl]
-impl ChunkableModule for EcmascriptModuleFacadeModule {
-    #[turbo_tasks::function]
-    fn as_chunk_item(
-        self: ResolvedVc<Self>,
-        module_graph: ResolvedVc<ModuleGraph>,
-        chunking_context: ResolvedVc<Box<dyn ChunkingContext>>,
-    ) -> Vc<Box<dyn turbopack_core::chunk::ChunkItem>> {
-        ecmascript_chunk_item(ResolvedVc::upcast(self), module_graph, chunking_context)
-    }
-}
-
-#[turbo_tasks::value_impl]
 impl EvaluatableAsset for EcmascriptModuleFacadeModule {}
 
 #[turbo_tasks::value_impl]
@@ -389,7 +374,7 @@ impl MergeableModule for EcmascriptModuleFacadeModule {
         self: Vc<Self>,
         modules: Vc<MergeableModulesExposed>,
         entry_points: Vc<MergeableModules>,
-    ) -> Result<Vc<Box<dyn ChunkableModule>>> {
+    ) -> Result<Vc<Box<dyn Module>>> {
         Ok(Vc::upcast(
             *MergedEcmascriptModule::new(
                 modules,

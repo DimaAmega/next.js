@@ -6,9 +6,9 @@ use turbo_tasks_fs::FileSystemPath;
 use turbopack_core::{
     asset::Asset,
     chunk::{
-        AssetSuffix, Chunk, ChunkGroupResult, ChunkItem, ChunkType, ChunkableModule,
-        ChunkingConfig, ChunkingConfigs, ChunkingContext, EntryChunkGroupResult, EvaluatableAssets,
-        MinifyType, SourceMapSourceType, SourceMapsType, UnusedReferences, UrlBehavior,
+        AssetSuffix, Chunk, ChunkGroupResult, ChunkItem, ChunkType, ChunkingConfig,
+        ChunkingConfigs, ChunkingContext, EntryChunkGroupResult, EvaluatableAssets, MinifyType,
+        SourceMapSourceType, SourceMapsType, UnusedReferences, UrlBehavior,
         availability_info::AvailabilityInfo,
         chunk_group::{MakeChunkGroupResult, make_chunk_group},
         chunk_id_strategy::ModuleIdStrategy,
@@ -635,35 +635,36 @@ impl ChunkingContext for NodeJsChunkingContext {
     #[turbo_tasks::function]
     async fn async_loader_chunk_item(
         self: Vc<Self>,
-        module: Vc<Box<dyn ChunkableModule>>,
+        module: Vc<Box<dyn Module>>,
         module_graph: Vc<ModuleGraph>,
         availability_info: AvailabilityInfo,
-    ) -> Result<Vc<Box<dyn ChunkItem>>> {
+    ) -> Result<Vc<ChunkItem>> {
         let chunking_context: ResolvedVc<Box<dyn ChunkingContext>> =
             Vc::upcast::<Box<dyn ChunkingContext>>(self)
                 .to_resolved()
                 .await?;
+        let module_graph = module_graph.to_resolved().await?;
         Ok(if self.await?.manifest_chunks {
             let manifest_asset = ManifestAsyncModule::new(
                 module,
-                module_graph,
+                *module_graph,
                 *chunking_context,
                 availability_info,
             )
             .to_resolved()
             .await?;
             let loader_module = ManifestLoaderModule::new(*manifest_asset);
-            loader_module.as_chunk_item(module_graph, *chunking_context)
+            ChunkItem::new(Vc::upcast(loader_module), *module_graph, *chunking_context)
         } else {
             let module = AsyncLoaderModule::new(module, *chunking_context, availability_info);
-            module.as_chunk_item(module_graph, *chunking_context)
+            ChunkItem::new(Vc::upcast(module), *module_graph, *chunking_context)
         })
     }
 
     #[turbo_tasks::function]
     async fn async_loader_chunk_item_ident(
         self: Vc<Self>,
-        module: Vc<Box<dyn ChunkableModule>>,
+        module: Vc<Box<dyn Module>>,
     ) -> Result<Vc<AssetIdent>> {
         Ok(if self.await?.manifest_chunks {
             ManifestLoaderModule::asset_ident_for(module)

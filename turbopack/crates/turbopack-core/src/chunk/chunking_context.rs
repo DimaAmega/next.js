@@ -10,8 +10,8 @@ use turbo_tasks_hash::DeterministicHash;
 use crate::{
     asset::Asset,
     chunk::{
-        ChunkItem, ChunkType, ChunkableModule, EvaluatableAssets,
-        availability_info::AvailabilityInfo, chunk_id_strategy::ModuleIdStrategy,
+        ChunkItem, ChunkType, EvaluatableAssets, availability_info::AvailabilityInfo,
+        chunk_id_strategy::ModuleIdStrategy,
     },
     environment::Environment,
     ident::AssetIdent,
@@ -425,13 +425,12 @@ pub trait ChunkingContext {
     #[turbo_tasks::function]
     fn async_loader_chunk_item(
         &self,
-        module: Vc<Box<dyn ChunkableModule>>,
+        module: Vc<Box<dyn Module>>,
         module_graph: Vc<ModuleGraph>,
         availability_info: AvailabilityInfo,
-    ) -> Vc<Box<dyn ChunkItem>>;
+    ) -> Vc<ChunkItem>;
     #[turbo_tasks::function]
-    fn async_loader_chunk_item_ident(&self, module: Vc<Box<dyn ChunkableModule>>)
-    -> Vc<AssetIdent>;
+    fn async_loader_chunk_item_ident(&self, module: Vc<Box<dyn Module>>) -> Vc<AssetIdent>;
 
     #[turbo_tasks::function]
     fn chunk_group(

@@ -2,7 +2,7 @@ use anyhow::{Result, bail};
 use turbo_rcstr::rcstr;
 use turbo_tasks::{IntoTraitRef, ResolvedVc, Vc};
 use turbopack_core::{
-    chunk::{AsyncModuleInfo, ChunkableModule, ChunkingContext},
+    chunk::{AsyncModuleInfo, ChunkingContext},
     context::AssetContext,
     ident::AssetIdent,
     module::{Module, ModuleSideEffects},
@@ -11,10 +11,7 @@ use turbopack_core::{
     source::{OptionSource, Source},
 };
 use turbopack_ecmascript::{
-    chunk::{
-        EcmascriptChunkItemContent, EcmascriptChunkPlaceable, EcmascriptExports,
-        ecmascript_chunk_item,
-    },
+    chunk::{EcmascriptChunkItemContent, EcmascriptChunkPlaceable, EcmascriptExports},
     runtime_functions::TURBOPACK_EXPORT_URL,
     utils::StringifyJs,
 };
@@ -68,18 +65,6 @@ impl Module for RawWebAssemblyModuleAsset {
     fn side_effects(self: Vc<Self>) -> Vc<ModuleSideEffects> {
         // this just exports a path
         ModuleSideEffects::SideEffectFree.cell()
-    }
-}
-
-#[turbo_tasks::value_impl]
-impl ChunkableModule for RawWebAssemblyModuleAsset {
-    #[turbo_tasks::function]
-    fn as_chunk_item(
-        self: ResolvedVc<Self>,
-        module_graph: ResolvedVc<ModuleGraph>,
-        chunking_context: ResolvedVc<Box<dyn ChunkingContext>>,
-    ) -> Vc<Box<dyn turbopack_core::chunk::ChunkItem>> {
-        ecmascript_chunk_item(ResolvedVc::upcast(self), module_graph, chunking_context)
     }
 }
 
