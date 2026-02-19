@@ -407,10 +407,9 @@ pub trait ChunkingContext {
         Vc::cell(false)
     }
 
+    /// Returns the chunking configs for this context. 
     #[turbo_tasks::function]
-    fn chunking_configs(self: Vc<Self>) -> Vc<ChunkingConfigs> {
-        ChunkingConfigs::default().cell()
-    }
+    fn chunking_configs(self: Vc<Self>) -> Vc<ChunkingConfigs>;
 
     #[turbo_tasks::function]
     fn batching_config(self: Vc<Self>) -> Vc<BatchingConfig> {

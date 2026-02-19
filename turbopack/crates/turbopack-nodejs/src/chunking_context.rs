@@ -23,9 +23,10 @@ use turbopack_core::{
     },
     output::{OutputAsset, OutputAssets},
 };
+use turbopack_css::chunk::CssChunkType;
 use turbopack_ecmascript::{
     async_chunk::module::AsyncLoaderModule,
-    chunk::EcmascriptChunk,
+    chunk::{EcmascriptChunk, EcmascriptChunkType},
     manifest::{chunk_asset::ManifestAsyncModule, loader_module::ManifestLoaderModule},
 };
 use turbopack_ecmascript_runtime::RuntimeType;
@@ -447,8 +448,19 @@ impl ChunkingContext for NodeJsChunkingContext {
     }
 
     #[turbo_tasks::function]
-    fn chunking_configs(&self) -> Result<Vc<ChunkingConfigs>> {
-        Ok(ChunkingConfigs(self.chunking_configs.iter().cloned().collect()).cell())
+    async fn chunking_configs(&self) -> Result<Vc<ChunkingConfigs>> {
+        let mut configs = self.chunking_configs.clone();
+        let ecma_type: ResolvedVc<Box<dyn ChunkType>> =
+            ResolvedVc::upcast(Vc::<EcmascriptChunkType>::default().to_resolved().await?);
+        if !configs.iter().any(|(ty, _)| *ty == ecma_type) {
+            configs.push((ecma_type, ChunkingConfig::default()));
+        }
+        let css_type: ResolvedVc<Box<dyn ChunkType>> =
+            ResolvedVc::upcast(Vc::<CssChunkType>::default().to_resolved().await?);
+        if !configs.iter().any(|(ty, _)| *ty == css_type) {
+            configs.push((css_type, ChunkingConfig::default()));
+        }
+        Ok(ChunkingConfigs(configs.into_iter().collect()).cell())
     }
 
     #[turbo_tasks::function]
