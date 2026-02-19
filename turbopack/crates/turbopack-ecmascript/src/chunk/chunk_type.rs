@@ -29,9 +29,8 @@ impl ChunkType for EcmascriptChunkType {
         Vc::cell(false)
     }
 
-    #[turbo_tasks::function]
-    fn accepts_module(&self, module: ResolvedVc<Box<dyn Module>>) -> Vc<bool> {
-        Vc::cell(ResolvedVc::try_sidecast::<Box<dyn EcmascriptChunkPlaceable>>(module).is_some())
+    fn accepts_module(&self, module: ResolvedVc<Box<dyn Module>>) -> bool {
+        ResolvedVc::try_sidecast::<Box<dyn EcmascriptChunkPlaceable>>(module).is_some()
     }
 
     #[turbo_tasks::function]

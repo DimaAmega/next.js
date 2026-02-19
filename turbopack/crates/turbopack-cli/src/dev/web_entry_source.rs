@@ -1,4 +1,4 @@
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use turbo_rcstr::{RcStr, rcstr};
 use turbo_tasks::{ResolvedVc, TryFlatJoinIterExt, TryJoinIterExt, Vc};
 use turbo_tasks_env::ProcessEnv;
@@ -6,7 +6,7 @@ use turbo_tasks_fs::FileSystemPath;
 use turbopack_browser::{BrowserChunkingContext, react_refresh::assert_can_resolve_react_refresh};
 use turbopack_cli_utils::runtime_entry::{RuntimeEntries, RuntimeEntry};
 use turbopack_core::{
-    chunk::{ChunkType, ChunkingContext, EvaluatableAsset, SourceMapSourceType, SourceMapsType},
+    chunk::{ChunkItem, ChunkingContext, EvaluatableAsset, SourceMapSourceType, SourceMapsType},
     environment::Environment,
     file_source::FileSource,
     module::Module,
@@ -169,37 +169,19 @@ pub async fn create_web_entry_source(
     let entries: Vec<_> = entries
         .into_iter()
         .map(|module| async move {
-            let mut is_chunkable = false;
-            {
-                let configs = chunking_context.chunking_configs().await?;
-                for (chunk_type, _) in configs.iter() {
-                    if *chunk_type.accepts_module(*module).await? {
-                        is_chunkable = true;
-                        break;
-                    }
-                }
-            }
-            if !is_chunkable {
-                // TODO convert into a serve-able asset
-                return Err(anyhow!(
-                    "Entry module is not chunkable, so it can't be used to bootstrap the \
-                     application"
-                ));
-            }
+            let chunk_item = ChunkItem::new(*module, *module_graph, *chunking_context)
+                .to_resolved()
+                .await?;
             if let Some(entry) = ResolvedVc::try_sidecast::<Box<dyn EvaluatableAsset>>(module) {
                 Ok(DevHtmlEntry {
-                    chunkable_module: module,
-                    module_graph,
-                    chunking_context,
+                    chunk_item,
                     runtime_entries: Some(runtime_entries.with_entry(*entry).to_resolved().await?),
                 })
             } else {
                 // TODO this is missing runtime code, so it's probably broken and we should also
                 // add an ecmascript chunk with the runtime code
                 Ok(DevHtmlEntry {
-                    chunkable_module: module,
-                    module_graph,
-                    chunking_context,
+                    chunk_item,
                     runtime_entries: None,
                 })
             }

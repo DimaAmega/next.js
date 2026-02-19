@@ -13,12 +13,12 @@ use serde::{Deserialize, Serialize};
 use tracing::Instrument;
 use turbo_prehash::BuildHasherExt;
 use turbo_tasks::{
-    FxIndexMap, FxIndexSet, NonLocalValue, ResolvedVc, TaskInput, TryJoinIterExt, ValueToString,
-    Vc, trace::TraceRawVcs,
+    FxIndexMap, FxIndexSet, NonLocalValue, ResolvedVc, TaskInput, TryJoinIterExt,
+    ValueToString, Vc, trace::TraceRawVcs,
 };
 
 use crate::{
-    chunk::{ChunkType, ChunkingContext, ChunkingType},
+    chunk::{ChunkingContext, ChunkingType},
     module::Module,
     module_graph::{
         GraphTraversalAction, ModuleGraph,
@@ -655,43 +655,18 @@ pub async fn compute_module_batches(
 
         // Now every module is only in one batch
 
-        // Pre-compute which modules are chunkable (accepted by a chunk type) for the sync loop
-        // below.
-        let chunkable_modules_set: FxHashSet<ResolvedVc<Box<dyn Module>>> = {
-            let all_parallel_modules: FxHashSet<_> = pre_batches
-                .batches
-                .iter()
-                .flat_map(|batch| batch.items.iter())
-                .filter_map(|item| {
-                    if let PreBatchItem::ParallelModule(module) = item {
-                        Some(*module)
-                    } else {
-                        None
-                    }
-                })
-                .collect();
-            let configs = chunking_context.chunking_configs().await?;
-            let results = all_parallel_modules
-                .iter()
-                .map(async |&module| {
-                    let mut is_chunkable = false;
-                    for (chunk_type, _) in configs.iter() {
-                        if *chunk_type.accepts_module(*module).await? {
-                            is_chunkable = true;
-                            break;
-                        }
-                    }
-                    Ok((module, is_chunkable))
-                })
-                .try_join()
-                .await?;
-            results
-                .into_iter()
-                .filter_map(|(module, is_chunkable)| if is_chunkable { Some(module) } else { None })
-                .collect()
-        };
-
         let mut edges_count = 0;
+        let chunking_config = chunking_context.chunking_configs().await?;
+        let mut chunkable_modules = FxIndexSet::default();
+        for prebatch in &pre_batches.batches {
+            for item in &prebatch.items {
+                if let PreBatchItem::ParallelModule(module) = item {
+                    if chunking_config.is_chunkable(*module).await {
+                        chunkable_modules.insert(*module);
+                    }
+                }
+            }
+        }
 
         // Since batches can only have references followed by a list of parallel chunkable modules,
         // we need to split batches that have modules before references.
@@ -706,7 +681,7 @@ pub async fn compute_module_batches(
             let mut mode = Mode::Other;
             for item in items {
                 let is_chunkable = if let PreBatchItem::ParallelModule(module) = &item {
-                    chunkable_modules_set.contains(module)
+                    chunkable_modules.contains(module)
                 } else {
                     false
                 };
@@ -775,7 +750,7 @@ pub async fn compute_module_batches(
             .map(async |(i, pre_batch)| {
                 let mut modules = pre_batch.items.iter().filter_map(|item| {
                     if let PreBatchItem::ParallelModule(module) = item {
-                        if chunkable_modules_set.contains(module) {
+                        if chunkable_modules.contains(module) {
                             Some(*module)
                         } else {
                             None

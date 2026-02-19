@@ -448,7 +448,7 @@ impl ChunkingContext for NodeJsChunkingContext {
 
     #[turbo_tasks::function]
     fn chunking_configs(&self) -> Result<Vc<ChunkingConfigs>> {
-        Ok(Vc::cell(self.chunking_configs.iter().cloned().collect()))
+        Ok(ChunkingConfigs(self.chunking_configs.iter().cloned().collect()).cell())
     }
 
     #[turbo_tasks::function]

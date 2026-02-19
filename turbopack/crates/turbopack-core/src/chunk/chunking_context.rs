@@ -1,9 +1,13 @@
+use std::ops::Deref;
+
 use anyhow::{Result, bail};
 use bincode::{Decode, Encode};
 use rustc_hash::{FxHashMap, FxHashSet};
 use serde::{Deserialize, Serialize};
 use turbo_rcstr::RcStr;
-use turbo_tasks::{NonLocalValue, ResolvedVc, TaskInput, Upcast, Vc, trace::TraceRawVcs};
+use turbo_tasks::{
+    IntoTraitRef, NonLocalValue, ResolvedVc, TaskInput, Upcast, Vc, trace::TraceRawVcs,
+};
 use turbo_tasks_fs::FileSystemPath;
 use turbo_tasks_hash::DeterministicHash;
 
@@ -276,8 +280,40 @@ pub struct ChunkingConfig {
     pub placeholder_for_future_extensions: (),
 }
 
-#[turbo_tasks::value(transparent)]
-pub struct ChunkingConfigs(FxHashMap<ResolvedVc<Box<dyn ChunkType>>, ChunkingConfig>);
+#[derive(Default)]
+#[turbo_tasks::value(shared)]
+pub struct ChunkingConfigs(pub FxHashMap<ResolvedVc<Box<dyn ChunkType>>, ChunkingConfig>);
+
+impl Deref for ChunkingConfigs {
+    type Target = FxHashMap<ResolvedVc<Box<dyn ChunkType>>, ChunkingConfig>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl ChunkingConfigs {
+    pub async fn is_chunkable(&self, module: ResolvedVc<Box<dyn Module>>) -> bool {
+        self.chunk_type(module).await.is_some()
+    }
+
+    /// Returns a [`ChunkType`], if one is supported by this module.
+    pub async fn chunk_type(
+        &self,
+        module: ResolvedVc<Box<dyn Module>>,
+    ) -> Option<ResolvedVc<Box<dyn ChunkType>>> {
+        for (chunk_type, _) in &self.0 {
+            if chunk_type
+                .into_trait_ref()
+                .await
+                .expect("Unexpectedly failed to cast trait")
+                .accepts_module(module)
+            {
+                return Some(*chunk_type);
+            }
+        }
+        None
+    }
+}
 
 #[turbo_tasks::value(shared)]
 #[derive(Debug, Clone, Copy, Hash, TaskInput, Default, Deserialize)]
@@ -373,7 +409,7 @@ pub trait ChunkingContext {
 
     #[turbo_tasks::function]
     fn chunking_configs(self: Vc<Self>) -> Vc<ChunkingConfigs> {
-        Vc::cell(Default::default())
+        ChunkingConfigs::default().cell()
     }
 
     #[turbo_tasks::function]

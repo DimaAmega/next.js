@@ -384,23 +384,37 @@ pub struct ChunkItem {
     pub module: ResolvedVc<Box<dyn Module>>,
     pub chunking_context: ResolvedVc<Box<dyn ChunkingContext>>,
     pub module_graph: ResolvedVc<ModuleGraph>,
+    pub ty: ResolvedVc<Box<dyn ChunkType>>,
 }
 
 #[turbo_tasks::value_impl]
 impl ChunkItem {
     /// Create a new [ChunkItem] from a [Module].
     #[turbo_tasks::function]
-    pub fn new(
+    pub async fn new(
         module: ResolvedVc<Box<dyn Module>>,
         module_graph: ResolvedVc<ModuleGraph>,
         chunking_context: ResolvedVc<Box<dyn ChunkingContext>>,
-    ) -> Vc<Self> {
-        Self {
+    ) -> Result<Vc<Self>> {
+        let Some(ty) = chunking_context
+            .chunking_configs()
+            .await?
+            .chunk_type(module)
+            .await
+        else {
+            bail!(
+                "Module {} is not chunkable (at least given the current config)",
+                module.ident_string().await?.to_string()
+            );
+        };
+
+        Ok(Self {
             module,
             chunking_context,
             module_graph,
+            ty,
         }
-        .cell()
+        .cell())
     }
 
     /// The [AssetIdent] of the [Module] that this [ChunkItem] was created from.
@@ -416,33 +430,15 @@ impl ChunkItem {
     /// different when the chunk item content depends on available modules e. g.
     /// for chunk loaders.
     #[turbo_tasks::function]
-    pub async fn content_ident(&self) -> Result<Vc<AssetIdent>> {
-        let configs = self.chunking_context.chunking_configs().await?;
-        for (chunk_type, _) in configs.iter() {
-            if *chunk_type.accepts_module(*self.module).await? {
-                return Ok(chunk_type.chunk_item_content_ident(
-                    *self.module,
-                    *self.chunking_context,
-                    *self.module_graph,
-                ));
-            }
-        }
-        Ok(self.module.ident())
+    pub async fn content_ident(&self) -> Vc<AssetIdent> {
+        self.ty
+            .chunk_item_content_ident(*self.module, *self.chunking_context, *self.module_graph)
     }
 
     /// The type of chunk this item should be assembled into.
     #[turbo_tasks::function]
-    pub async fn ty(&self) -> Result<Vc<Box<dyn ChunkType>>> {
-        let configs = self.chunking_context.chunking_configs().await?;
-        for (chunk_type, _) in configs.iter() {
-            if *chunk_type.accepts_module(*self.module).await? {
-                return Ok(**chunk_type);
-            }
-        }
-        bail!(
-            "No chunk type accepts module {}",
-            self.module.ident().to_string().await?
-        )
+    pub async fn ty(&self) -> Vc<Box<dyn ChunkType>> {
+        *self.ty
     }
 
     /// Retrieve the module associated with this ChunkItem.
@@ -461,18 +457,10 @@ impl ChunkItem {
 impl OutputAssetsReference for ChunkItem {
     #[turbo_tasks::function]
     async fn references(&self) -> Result<Vc<OutputAssetsWithReferenced>> {
-        let configs = self.chunking_context.chunking_configs().await?;
-        for (chunk_type, _) in configs.iter() {
-            if *chunk_type.accepts_module(*self.module).await? {
-                return Ok(chunk_type.chunk_item_output_assets(
-                    *self.module,
-                    *self.chunking_context,
-                    *self.module_graph,
-                ));
-            }
-        }
-        Ok(OutputAssetsWithReferenced::from_assets(
-            *OutputAssets::empty_resolved(),
+        Ok(self.ty.chunk_item_output_assets(
+            *self.module,
+            *self.chunking_context,
+            *self.module_graph,
         ))
     }
 }
@@ -484,11 +472,7 @@ pub trait ChunkType: ValueToString {
     fn is_style(self: Vc<Self>) -> Vc<bool>;
 
     /// Returns true if this chunk type can handle the given module.
-    #[turbo_tasks::function]
-    fn accepts_module(&self, module: ResolvedVc<Box<dyn Module>>) -> Vc<bool> {
-        let _ = module;
-        Vc::cell(false)
-    }
+    fn accepts_module(&self, module: ResolvedVc<Box<dyn Module>>) -> bool;
 
     /// Create a new chunk for the given chunk items
     #[turbo_tasks::function]
