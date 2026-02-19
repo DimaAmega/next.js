@@ -404,7 +404,7 @@ impl ChunkItem {
         else {
             bail!(
                 "Module {} is not chunkable (at least given the current config)",
-                module.ident_string().await?.to_string()
+                module.ident_string().await?
             );
         };
 

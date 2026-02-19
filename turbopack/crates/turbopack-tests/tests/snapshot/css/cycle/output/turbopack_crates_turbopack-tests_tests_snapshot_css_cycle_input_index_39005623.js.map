@@ -2,5 +2,5 @@
   "version": 3,
   "sources": [],
   "sections": [
-    {"offset": {"line": 3, "column": 0}, "map": {"version":3,"sources":[],"names":[],"mappings":""}}]
+    {"offset": {"line": 3, "column": 0}, "map": {"version":3,"sources":["turbopack:///[project]/turbopack/crates/turbopack-tests/tests/snapshot/css/cycle/input/index.js"],"sourcesContent":["import('./1.css')\nimport('./2.css')\n\nimport('./x.css')\nimport('./y.css')\n\nimport('./i.css')\n"],"names":[],"mappings":";4CAAO;;;4CACA;;;4CAEA;;;4CACA;;;4CAEA"}}]
 }

@@ -301,7 +301,7 @@ impl ChunkingConfigs {
         &self,
         module: ResolvedVc<Box<dyn Module>>,
     ) -> Option<ResolvedVc<Box<dyn ChunkType>>> {
-        for (chunk_type, _) in &self.0 {
+        for chunk_type in self.0.keys() {
             if chunk_type
                 .into_trait_ref()
                 .await

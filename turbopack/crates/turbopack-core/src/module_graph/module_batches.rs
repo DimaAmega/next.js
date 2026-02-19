@@ -659,10 +659,10 @@ pub async fn compute_module_batches(
         let mut chunkable_modules = FxIndexSet::default();
         for prebatch in &pre_batches.batches {
             for item in &prebatch.items {
-                if let PreBatchItem::ParallelModule(module) = item {
-                    if chunking_config.is_chunkable(*module).await {
-                        chunkable_modules.insert(*module);
-                    }
+                if let PreBatchItem::ParallelModule(module) = item
+                    && chunking_config.is_chunkable(*module).await
+                {
+                    chunkable_modules.insert(*module);
                 }
             }
         }
