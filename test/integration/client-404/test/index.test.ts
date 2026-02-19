@@ -10,6 +10,7 @@ import {
   nextStart,
   retry,
   getClientBuildManifestLoaderChunkUrlPath,
+  getDeploymentId,
 } from 'next-test-utils'
 import webdriver from 'next-webdriver'
 import { check } from 'next-test-utils'
@@ -49,9 +50,12 @@ const clientNavigation = (context, isProd = false) => {
         let chunk = getClientBuildManifestLoaderChunkUrlPath(appDir, '/missing')
         const browser = await webdriver(context.appPort, '/to-missing-link', {
           beforePageLoad(page) {
-            page.route('**/' + chunk, (route) => {
-              route.abort('internetdisconnected')
-            })
+            page.route(
+              '**/' + chunk + getDeploymentId(appDir).getAssetQuery(),
+              (route) => {
+                route.abort('internetdisconnected')
+              }
+            )
           },
         })
         await browser.eval(() => ((window as any).beforeNav = 'hi'))

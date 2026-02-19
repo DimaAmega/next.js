@@ -9,6 +9,7 @@ import {
   killApp,
   check,
   getClientBuildManifestLoaderChunkUrlPath,
+  getDeploymentId,
 } from 'next-test-utils'
 
 const appDir = join(__dirname, '..')
@@ -30,9 +31,12 @@ describe('Failing to load _error', () => {
         const browser = await webdriver(appPort, '/', {
           beforePageLoad(page) {
             // Make _error route fail to load
-            page.route('**/' + chunk, (route) => {
-              route.abort('blockedbyclient')
-            })
+            page.route(
+              '**/' + chunk + getDeploymentId(appDir).getAssetQuery(),
+              (route) => {
+                route.abort('blockedbyclient')
+              }
+            )
           },
         })
 
