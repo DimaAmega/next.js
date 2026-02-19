@@ -407,7 +407,7 @@ pub trait ChunkingContext {
         Vc::cell(false)
     }
 
-    /// Returns the chunking configs for this context. 
+    /// Returns the chunking configs for this context.
     #[turbo_tasks::function]
     fn chunking_configs(self: Vc<Self>) -> Vc<ChunkingConfigs>;
 
