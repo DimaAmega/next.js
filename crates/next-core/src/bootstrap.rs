@@ -35,7 +35,7 @@ pub async fn bootstrap(
 ) -> Result<Vc<Box<dyn EvaluatableAsset>>> {
     let path = asset.ident().path().await?;
     let Some(path) = base_path.get_path_to(&path) else {
-        turbobail!("asset {} is not in base path {}", asset.ident(), base_path)
+        turbobail!("asset {} is not in base path {base_path}", asset.ident())
     };
     let path = if let Some((name, ext)) = path.rsplit_once('.') {
         if !ext.contains('/') { name } else { path }

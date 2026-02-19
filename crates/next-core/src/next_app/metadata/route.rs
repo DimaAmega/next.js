@@ -123,7 +123,7 @@ async fn get_base64_file_content(path: FileSystemPath) -> Result<String> {
             Base64Display::new(&content, &STANDARD).to_string()
         }
         FileContent::NotFound => {
-            turbobail!("metadata file not found: {}", path)
+            turbobail!("metadata file not found: {path}")
         }
     })
 }

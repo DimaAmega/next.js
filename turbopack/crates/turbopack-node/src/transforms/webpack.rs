@@ -10,8 +10,8 @@ use serde_json::{Map as JsonMap, Value as JsonValue, json};
 use serde_with::serde_as;
 use turbo_rcstr::{RcStr, rcstr};
 use turbo_tasks::{
-    Completion, OperationVc, ResolvedVc, TaskInput, TryJoinIterExt, ValueToString, Vc,
-    trace::TraceRawVcs,
+    Completion, OperationVc, ResolvedVc, TaskInput, TryJoinIterExt, Vc, trace::TraceRawVcs,
+    turbobail,
 };
 use turbo_tasks_env::ProcessEnv;
 use turbo_tasks_fs::{
@@ -586,13 +586,12 @@ impl EvaluateContext for WebpackLoaderContext {
                         Ok(ResponseMessage::Resolve { path })
                     } else {
                         turbobail!(
-                            "Resolving {} in {} ends up on a different filesystem",
-                            request,
-                            lookup_path
+                            "Resolving {request} in {lookup_path} ends up on a different \
+                             filesystem"
                         );
                     }
                 } else {
-                    turbobail!("Unable to resolve {} in {}", request, lookup_path);
+                    turbobail!("Unable to resolve {request} in {lookup_path}");
                 }
             }
             RequestMessage::TrackFileRead { file } => {

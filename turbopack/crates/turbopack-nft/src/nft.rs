@@ -155,17 +155,18 @@ async fn to_graph(asset: ResolvedVc<Box<dyn OutputAsset>>, max_depth: usize) -> 
         for _ in 0..depth {
             indent.push_str("  ");
         }
+        let path = asset.path();
         if visited.insert(asset) {
             if depth < max_depth {
                 for &asset in references.iter().rev() {
                     queue.push((depth + 1, asset));
                 }
             }
-            result.push(turbofmt!("{}{}", indent, asset.path()).await?);
+            result.push(turbofmt!("{indent}{path}").await?);
         } else if references.is_empty() {
-            result.push(turbofmt!("{}{} *", indent, asset.path()).await?);
+            result.push(turbofmt!("{indent}{path} *").await?);
         } else {
-            result.push(turbofmt!("{}{} *...", indent, asset.path()).await?);
+            result.push(turbofmt!("{indent}{path} *...").await?);
         }
     }
     result.push("".into());

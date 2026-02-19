@@ -974,7 +974,7 @@ impl FileSystem for DiskFileSystem {
 
         // Check if path is denied - if so, return an error
         if self.inner.is_path_denied(&fs_path) {
-            turbobail!("Cannot write to denied path: {}", fs_path);
+            turbobail!("Cannot write to denied path: {fs_path}");
         }
         let full_path = self.to_sys_path(&fs_path);
 
@@ -1104,7 +1104,7 @@ impl FileSystem for DiskFileSystem {
 
         // Check if path is denied - if so, return an error
         if self.inner.is_path_denied(&fs_path) {
-            turbobail!("Cannot write link to denied path: {}", fs_path);
+            turbobail!("Cannot write link to denied path: {fs_path}");
         }
 
         let content = target.await?;
@@ -1314,7 +1314,7 @@ impl FileSystem for DiskFileSystem {
 
         // Check if path is denied - if so, return an error (metadata shouldn't be readable)
         if self.inner.is_path_denied(&fs_path) {
-            turbobail!("Cannot read metadata from denied path: {}", fs_path);
+            turbobail!("Cannot read metadata from denied path: {fs_path}");
         }
 
         self.inner.register_read_invalidator(&full_path)?;

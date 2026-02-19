@@ -57,10 +57,7 @@ impl AttachedFileSystem {
             fs if fs == this.child_fs => {
                 Ok(self.child_path().await?.join(&contained_path.path)?.cell())
             }
-            _ => turbobail!(
-                "path {} not part of self, the root fs or the child fs",
-                contained_path
-            ),
+            _ => turbobail!("path {contained_path} not part of self, the root fs or the child fs"),
         }
     }
 

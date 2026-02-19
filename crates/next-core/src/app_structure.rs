@@ -99,7 +99,7 @@ pub async fn get_metadata_route_name(meta: MetadataItem) -> Result<Vc<RcStr>> {
         MetadataItem::Static { path } => Vc::cell(path.file_name().into()),
         MetadataItem::Dynamic { path } => {
             let Some(stem) = path.file_stem() else {
-                turbobail!("unable to resolve file stem for metadata item at {}", path);
+                turbobail!("unable to resolve file stem for metadata item at {path}");
             };
 
             match stem {

@@ -288,10 +288,9 @@ impl Asset for NftJsonAsset {
                             FileSystemEntryType::Symlink
                         ) {
                             turbobail!(
-                                "Encountered file inside of symlink in NFT list: {} is a symlink, \
-                                 but {} was created inside of it",
-                                current_path,
-                                referenced_chunk_path
+                                "Encountered file inside of symlink in NFT list: {current_path} \
+                                 is a symlink, but {referenced_chunk_path} was created inside of \
+                                 it"
                             );
                         }
 

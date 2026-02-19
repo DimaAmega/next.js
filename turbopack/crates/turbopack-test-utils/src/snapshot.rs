@@ -155,15 +155,14 @@ pub async fn diff(path: FileSystemPath, actual: Vc<AssetContent>) -> Result<()> 
 }
 
 async fn get_contents(file: Vc<AssetContent>, path: FileSystemPath) -> Result<Option<String>> {
-    let path2 = path.clone();
     Ok(
         match &*file
             .await
-            .context(turbofmt!("Unable to read AssetContent of {}", path).await?)?
+            .context(turbofmt!("Unable to read AssetContent of {path}").await?)?
         {
             AssetContent::File(file) => match &*file
                 .await
-                .context(turbofmt!("Unable to read FileContent of {}", path2).await?)?
+                .context(turbofmt!("Unable to read FileContent of {path}").await?)?
             {
                 FileContent::NotFound => None,
                 FileContent::Content(expected) => {

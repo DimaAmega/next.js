@@ -7,7 +7,7 @@ use syn::{
     punctuated::Punctuated,
 };
 
-use crate::turbofmt_macro::{generate_arg_vars, generate_resolve_stmts};
+use crate::turbofmt_macro::{FormatIter, FormatPart, generate_arg_vars, generate_resolve_stmts};
 
 /// The parsed form of a `#[value_to_string(...)]` attribute.
 enum AttrForm {
@@ -179,19 +179,19 @@ fn parse_attr(attr: &Attribute) -> syn::Result<AttrForm> {
 /// returns a `self.field_name` expression. This lets us skip `format!` entirely and delegate
 /// directly to `ValueToStringify::to_stringify`.
 fn try_single_field_self_expr(fmt: &str) -> Option<Expr> {
-    if fmt.starts_with('{') && fmt.ends_with('}') && fmt.len() > 2 {
-        let inner = &fmt[1..fmt.len() - 1];
-        if !inner.contains('{') && !inner.contains('}') && !inner.contains(':') {
-            return Some(if inner.chars().all(|c| c.is_ascii_digit()) {
-                let idx = syn::Index::from(inner.parse::<usize>().unwrap());
+    let mut iter = FormatIter::new(fmt);
+    match (iter.next(), iter.next()) {
+        (Some(FormatPart::VarRef(name)), None) if !name.is_empty() => {
+            Some(if name.chars().all(|c| c.is_ascii_digit()) {
+                let idx = syn::Index::from(name.parse::<usize>().unwrap());
                 syn::parse_quote!(self.#idx)
             } else {
-                let ident = format_ident!("{}", inner);
+                let ident = format_ident!("{}", name);
                 syn::parse_quote!(self.#ident)
-            });
+            })
         }
+        _ => None,
     }
-    None
 }
 
 /// Extract `{field}` references from a format string. Returns the transformed format string
@@ -203,44 +203,26 @@ fn parse_format_fields(fmt: &str) -> (String, Vec<Field>) {
     let mut fields: IndexSet<Field> = IndexSet::new();
     let mut transformed = String::new();
 
-    let chars: Vec<char> = fmt.chars().collect();
-    let mut i = 0;
-
-    while i < chars.len() {
-        if chars[i] == '{' {
-            if i + 1 < chars.len() && chars[i + 1] == '{' {
-                transformed.push_str("{{");
-                i += 2;
-                continue;
+    for part in FormatIter::new(fmt) {
+        match part {
+            FormatPart::RawString(s) | FormatPart::EscapedBrace(s) => {
+                transformed.push_str(s);
             }
-            i += 1;
-            let start = i;
-            while i < chars.len() && chars[i] != '}' {
-                i += 1;
+            FormatPart::VarRef(name) => {
+                let field = Field::new(name.to_owned());
+                transformed.push('{');
+                transformed.push_str(&field.var.to_string());
+                transformed.push('}');
+                fields.insert(field);
             }
-            let full_contents: String = chars[start..i].iter().collect();
-            i += 1;
-
-            // Split off any format specifier (e.g., "field:?" → name="field", spec=":?")
-            let (field_name, spec) = match full_contents.find(':') {
-                Some(colon) => (&full_contents[..colon], &full_contents[colon..]),
-                None => (full_contents.as_str(), ""),
-            };
-
-            let field = Field::new(field_name.to_owned());
-
-            transformed.push('{');
-            transformed.push_str(&field.var.to_string());
-            transformed.push_str(spec);
-            transformed.push('}');
-
-            fields.insert(field);
-        } else if chars[i] == '}' && i + 1 < chars.len() && chars[i + 1] == '}' {
-            transformed.push_str("}}");
-            i += 2;
-        } else {
-            transformed.push(chars[i]);
-            i += 1;
+            FormatPart::VarRefFormat(name, spec) => {
+                let field = Field::new(name.to_owned());
+                transformed.push('{');
+                transformed.push_str(&field.var.to_string());
+                transformed.push_str(spec);
+                transformed.push('}');
+                fields.insert(field);
+            }
         }
     }
 

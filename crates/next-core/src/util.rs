@@ -223,11 +223,7 @@ pub async fn pathname_for_path(
     let path = if let Some(path) = server_root.get_path_to(&server_path_value) {
         path
     } else {
-        turbobail!(
-            "server_path ({}) is not in server_root ({})",
-            server_path,
-            server_root
-        )
+        turbobail!("server_path ({server_path}) is not in server_root ({server_root})")
     };
     let path = match (path_ty, path) {
         // "/" is special-cased to "/index" for data routes.
