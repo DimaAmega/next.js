@@ -71,15 +71,26 @@ impl ChunkItemOrBatchWithAsyncModuleInfo {
         chunking_context: Vc<Box<dyn ChunkingContext>>,
     ) -> Result<Option<Self>> {
         Ok(match chunkable_module_or_batch {
-            ChunkableModuleOrBatch::Module(module) => Some(Self::ChunkItem(
-                attach_async_info_to_chunkable_module(
-                    module,
-                    async_module_info,
-                    module_graph,
-                    chunking_context,
-                )
-                .await?,
-            )),
+            ChunkableModuleOrBatch::Module(module) => {
+                // Skip modules that are not accepted by any chunk type
+                if !chunking_context
+                    .chunking_configs()
+                    .await?
+                    .is_chunkable(module)
+                    .await
+                {
+                    return Ok(None);
+                }
+                Some(Self::ChunkItem(
+                    attach_async_info_to_chunkable_module(
+                        module,
+                        async_module_info,
+                        module_graph,
+                        chunking_context,
+                    )
+                    .await?,
+                ))
+            }
             ChunkableModuleOrBatch::Batch(batch) => Some(Self::Batch(
                 ChunkItemBatchWithAsyncModuleInfo::from_module_batch(
                     *batch,
