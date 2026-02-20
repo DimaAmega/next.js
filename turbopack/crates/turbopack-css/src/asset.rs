@@ -344,12 +344,10 @@ impl CssChunkItem for CssModuleChunkItem {
             .cell())
         } else {
             Ok(CssChunkItemContent {
-                inner_code: turbofmt!(
-                    "/* unparsable {} */",
-                    self.module.ident()
-                )
-                .await?
-                .into(),
+                inner_code: turbofmt!("/* unparsable {} */", self.module.ident())
+                    .await?
+                    .to_string()
+                    .into(),
                 imports: vec![],
                 import_context: None,
                 source_map: FileContent::NotFound.resolved_cell(),

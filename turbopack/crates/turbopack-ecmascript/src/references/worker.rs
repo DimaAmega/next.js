@@ -215,13 +215,14 @@ impl ModuleReference for WorkerAssetReference {
                             title: StyledString::Text(rcstr!("non-evaluatable module"))
                                 .resolved_cell(),
                             message: StyledString::Text(
-                                format!(
+                                turbofmt!(
                                     "Worker thread entry point module '{}' must be evaluatable to \
                                      serve as an entry point. This module cannot be used as a \
                                      Node.js worker_threads Worker entry point because it doesn't \
                                      support direct evaluation.",
-                                    module_ident
+                                    module.ident()
                                 )
+                                .await?
                                 .into(),
                             )
                             .resolved_cell(),
@@ -294,7 +295,7 @@ impl ValueToString for WorkerAssetReference {
             WorkerRequest::Url(request) => request.to_string(),
             WorkerRequest::Pattern { path, .. } => path.to_string(),
         };
-        Ok(turbofmt!("new {worker_type}({request})").await?.cell())
+        Ok(Vc::cell(turbofmt!("new {worker_type}({request})").await?))
     }
 }
 

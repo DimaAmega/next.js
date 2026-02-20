@@ -1518,9 +1518,9 @@ async fn merge_modules(
     let (merged_ast, inserted) = match result {
         Ok(v) => v,
         Err((content_idx, err)) => {
-            return Err(err.context(
-                turbofmt!("Processing {}", contents[content_idx].0.ident()).await?,
-            ));
+            return Err(
+                err.context(turbofmt!("Processing {}", contents[content_idx].0.ident()).await?)
+            );
         }
     };
 
@@ -1880,11 +1880,15 @@ async fn process_parse_result(
                         .as_ref()
                         .and_then(|m| m.first().map(|f| format!("\n{f}")))
                         .unwrap_or("".into());
-                    let msg = turbofmt!("Could not parse module '{}'\n{error_messages}", ident.path()).await?;
+                    let msg = turbofmt!(
+                        "Could not parse module '{}'\n{error_messages}",
+                        ident.path()
+                    )
+                    .await?;
                     let body = vec![
                         quote!(
                             "const e = new Error($msg);" as Stmt,
-                            msg: Expr = Expr::Lit(msg.into()),
+                            msg: Expr = Expr::Lit(msg.to_string().into()),
                         ),
                         quote!("e.code = 'MODULE_UNPARSABLE';" as Stmt),
                         quote!("throw e;" as Stmt),
@@ -1906,11 +1910,13 @@ async fn process_parse_result(
                     }
                 }
                 ParseResult::NotFound => {
-                    let msg = turbofmt!("Could not parse module '{}', file not found", ident.path()).await?;
+                    let msg =
+                        turbofmt!("Could not parse module '{}', file not found", ident.path())
+                            .await?;
                     let body = vec![
                         quote!(
                             "const e = new Error($msg);" as Stmt,
-                            msg: Expr = Expr::Lit(msg.into()),
+                            msg: Expr = Expr::Lit(msg.to_string().into()),
                         ),
                         quote!("e.code = 'MODULE_UNPARSABLE';" as Stmt),
                         quote!("throw e;" as Stmt),

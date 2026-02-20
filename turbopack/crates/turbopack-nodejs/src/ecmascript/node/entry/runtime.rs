@@ -1,9 +1,9 @@
 use std::io::Write;
 
-use anyhow::{Result, bail};
+use anyhow::Result;
 use indoc::writedoc;
 use turbo_rcstr::rcstr;
-use turbo_tasks::{ResolvedVc, ValueToString, Vc};
+use turbo_tasks::{ResolvedVc, ValueToString, Vc, turbobail};
 use turbo_tasks_fs::{File, FileContent, FileSystem, FileSystemPath};
 use turbopack_core::{
     asset::{Asset, AssetContent},

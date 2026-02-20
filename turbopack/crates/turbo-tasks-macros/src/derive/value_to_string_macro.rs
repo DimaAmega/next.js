@@ -95,7 +95,16 @@ pub fn derive_value_to_string(input: TokenStream) -> TokenStream {
 }
 
 /// Wrap a function body in the `#[turbo_tasks::value_impl] impl ValueToString` boilerplate.
-fn wrap_impl(ident: &syn::Ident, is_async: bool, body: TokenStream2) -> TokenStream {
+///
+/// `body` is the body of `ValueToString::to_string` (returns `Vc<RcStr>` or `Result<Vc<RcStr>>`).
+/// `stringify_body` is the inner body of `ValueToStringify::to_stringify`'s async block
+/// (evaluates to `Result<StringifyType>`). This avoids the `Clone` + `cell()` roundtrip.
+fn wrap_impl(
+    ident: &syn::Ident,
+    is_async: bool,
+    body: TokenStream2,
+    stringify_body: TokenStream2,
+) -> TokenStream {
     let async_kw = if is_async {
         quote! { async }
     } else {
@@ -111,21 +120,23 @@ fn wrap_impl(ident: &syn::Ident, is_async: bool, body: TokenStream2) -> TokenStr
         impl turbo_tasks::ValueToString for #ident {
             #[turbo_tasks::function]
             #async_kw fn to_string(&self) -> #ret_ty {
+                #[allow(unused_imports)]
+                use turbo_tasks::display::ValueToStringify as _;
                 #body
             }
         }
 
         /// Auto-generated: allows this type to be used directly in `turbofmt!`/`turbobail!`.
-        impl turbo_tasks::display::ValueToStringify for #ident {
+        impl turbo_tasks::display::ValueToStringify for &#ident {
             #[inline(always)]
             fn to_stringify(
-                &self,
+                self,
             ) -> impl std::future::Future<Output = anyhow::Result<turbo_tasks::display::StringifyType>>
                    + Send {
-                let vc = turbo_tasks::ValueToString::to_string(self.clone().cell());
+                #[allow(unused_imports)]
+                use turbo_tasks::display::ValueToStringify as _;
                 async move {
-                    let s = vc.await?;
-                    Ok(turbo_tasks::display::StringifyType::RcStr(s))
+                    #stringify_body
                 }
             }
         }
@@ -248,9 +259,9 @@ fn parse_format_fields(fmt: &str) -> (String, Vec<Field>) {
 /// `add_ref` adds `&` for struct context (owned values); enum context already has references.
 fn generate_resolve(var_name: &syn::Ident, access: &TokenStream2, add_ref: bool) -> TokenStream2 {
     if add_ref {
-        quote! { let #var_name = turbo_tasks::display::ValueToStringify::to_stringify(&(#access)).await?; }
+        quote! { let #var_name = (&&#access).to_stringify().await?; }
     } else {
-        quote! { let #var_name = turbo_tasks::display::ValueToStringify::to_stringify(#access).await?; }
+        quote! { let #var_name = (&#access).to_stringify().await?; }
     }
 }
 
@@ -259,25 +270,33 @@ fn generate_struct_impl(
     _fields: &Fields,
     attr: Option<AttrForm>,
 ) -> TokenStream {
-    let (is_async, body) = match attr {
+    let (is_async, body, stringify_body) = match attr {
         None => (
             false,
             quote! { turbo_tasks::Vc::cell(turbo_rcstr::RcStr::from(self.to_string())) },
+            quote! {
+                Ok(turbo_tasks::display::StringifyType::String(
+                    std::string::ToString::to_string(self),
+                ))
+            },
         ),
         Some(AttrForm::FormatAutoFields(fmt)) => struct_format_auto_fields_body(&fmt),
         Some(AttrForm::FormatExprs(fmt, exprs)) => struct_format_exprs_body(&fmt, &exprs),
         Some(AttrForm::DirectExpr(expr)) => (
             true,
             quote! {
-                let __val = turbo_tasks::display::ValueToStringify::to_stringify(&(#expr)).await?;
+                let __val = (&&(#expr)).to_stringify().await?;
                 Ok(turbo_tasks::Vc::cell(turbo_rcstr::RcStr::from(__val)))
+            },
+            quote! {
+                (&&(#expr)).to_stringify().await
             },
         ),
     };
-    wrap_impl(ident, is_async, body)
+    wrap_impl(ident, is_async, body, stringify_body)
 }
 
-fn struct_format_auto_fields_body(fmt: &str) -> (bool, TokenStream2) {
+fn struct_format_auto_fields_body(fmt: &str) -> (bool, TokenStream2, TokenStream2) {
     let (transformed_fmt, field_refs) = parse_format_fields(fmt);
 
     if field_refs.is_empty() {
@@ -286,6 +305,9 @@ fn struct_format_auto_fields_body(fmt: &str) -> (bool, TokenStream2) {
         return (
             false,
             quote! { turbo_tasks::Vc::cell(turbo_rcstr::rcstr!(#unescaped)) },
+            quote! {
+                Ok(turbo_tasks::display::StringifyType::String(String::from(#unescaped)))
+            },
         );
     }
 
@@ -303,6 +325,10 @@ fn struct_format_auto_fields_body(fmt: &str) -> (bool, TokenStream2) {
             #(#resolves)*
             Ok(turbo_tasks::Vc::cell(turbo_rcstr::RcStr::from(format!(#transformed_fmt))))
         },
+        quote! {
+            #(#resolves)*
+            Ok(turbo_tasks::display::StringifyType::String(format!(#transformed_fmt)))
+        },
     )
 }
 
@@ -310,7 +336,7 @@ fn struct_format_auto_fields_body(fmt: &str) -> (bool, TokenStream2) {
 ///
 /// Uses the shared `generate_resolve_stmts`/`generate_arg_vars` from `turbofmt_macro`
 /// so that format expression resolution shares a single codepath with `turbofmt!`.
-fn struct_format_exprs_body(fmt: &str, exprs: &[Expr]) -> (bool, TokenStream2) {
+fn struct_format_exprs_body(fmt: &str, exprs: &[Expr]) -> (bool, TokenStream2, TokenStream2) {
     let resolve_stmts = generate_resolve_stmts(exprs, true);
     let vars = generate_arg_vars(exprs.len());
 
@@ -319,6 +345,10 @@ fn struct_format_exprs_body(fmt: &str, exprs: &[Expr]) -> (bool, TokenStream2) {
         quote! {
             #(#resolve_stmts)*
             Ok(turbo_tasks::Vc::cell(turbo_rcstr::RcStr::from(format!(#fmt, #(#vars),*))))
+        },
+        quote! {
+            #(#resolve_stmts)*
+            Ok(turbo_tasks::display::StringifyType::String(format!(#fmt, #(#vars),*)))
         },
     )
 }
@@ -382,16 +412,21 @@ fn generate_enum_impl(
         quote! { turbo_tasks::Vc::cell(s.into()) }
     };
 
-    wrap_impl(
-        ident,
-        needs_async,
-        quote! {
-            let s = match self {
-                #(#match_arms)*
-            };
-            #result_expr
-        },
-    )
+    let body = quote! {
+        let s = match self {
+            #(#match_arms)*
+        };
+        #result_expr
+    };
+
+    let stringify_body = quote! {
+        let s = match self {
+            #(#match_arms)*
+        };
+        Ok(turbo_tasks::display::StringifyType::String(s.to_string()))
+    };
+
+    wrap_impl(ident, needs_async, body, stringify_body)
 }
 
 fn generate_enum_format_auto_fields(
@@ -506,7 +541,7 @@ fn generate_enum_direct_expr(
     let pattern = enum_destructure_all(ident, variant_ident, fields);
     quote! {
         #pattern => {
-            turbo_rcstr::RcStr::from(turbo_tasks::display::ValueToStringify::to_stringify(#expr).await?)
+            turbo_rcstr::RcStr::from((&#expr).to_stringify().await?)
         }
     }
 }

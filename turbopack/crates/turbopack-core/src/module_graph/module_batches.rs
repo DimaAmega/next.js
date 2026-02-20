@@ -79,14 +79,18 @@ pub struct ModuleBatchesGraph {
 impl ModuleBatchesGraph {
     pub async fn get_entry_index(&self, entry: ResolvedVc<Box<dyn Module>>) -> Result<NodeIndex> {
         let Some(entry) = self.entries.get(&entry) else {
-            turbobail!(
-                "Entry {} is not in graph (possible entries: {:#?})",
-                entry.ident(),
+            let possible_entries = format!(
+                "{:#?}",
                 self.entries
                     .keys()
                     .map(|e| e.ident().to_string())
                     .try_join()
                     .await?
+            );
+            turbobail!(
+                "Entry {} is not in graph (possible entries: {})",
+                entry.ident(),
+                possible_entries
             );
         };
         Ok(*entry)

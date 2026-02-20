@@ -1,11 +1,11 @@
 use std::io::Write;
 
-use anyhow::{Result, bail};
+use anyhow::Result;
 use either::Either;
 use indoc::writedoc;
 use serde::Serialize;
 use turbo_rcstr::rcstr;
-use turbo_tasks::{ResolvedVc, TryJoinIterExt, ValueToString, Vc};
+use turbo_tasks::{ResolvedVc, TryJoinIterExt, ValueToString, Vc, turbobail};
 use turbo_tasks_fs::{File, FileContent, FileSystemPath};
 use turbopack_core::{
     asset::{Asset, AssetContent},

@@ -1687,7 +1687,6 @@ impl FileSystemPath {
     }
 }
 
-
 #[turbo_tasks::function]
 pub async fn rebase(
     fs_path: FileSystemPath,
@@ -1855,10 +1854,7 @@ impl RealPathResultError {
         Ok(match self {
             RealPathResultError::TooManySymlinks => {
                 let len = result.symlinks.len();
-                turbofmt!(
-                    "Symlink {orig} leads to too many other symlinks ({len} links)"
-                )
-                .await?
+                turbofmt!("Symlink {orig} leads to too many other symlinks ({len} links)").await?
             }
             RealPathResultError::CycleDetected => {
                 // symlinks is Vec<FileSystemPath> — format with Debug since
@@ -1870,16 +1866,11 @@ impl RealPathResultError {
                 turbofmt!("Symlink {orig} is in a symlink loop: {symlinks_dbg}").await?
             }
             RealPathResultError::Invalid => {
-                turbofmt!(
-                    "Symlink {orig} is invalid, it points out of the filesystem root"
-                )
-                .await?
+                turbofmt!("Symlink {orig} is invalid, it points out of the filesystem root").await?
             }
             RealPathResultError::NotFound => {
-                turbofmt!(
-                    "Symlink {orig} is invalid, it points at a file that doesn't exist"
-                )
-                .await?
+                turbofmt!("Symlink {orig} is invalid, it points at a file that doesn't exist")
+                    .await?
             }
         })
     }

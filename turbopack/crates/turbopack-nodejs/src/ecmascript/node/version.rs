@@ -1,6 +1,6 @@
-use anyhow::{Result, bail};
+use anyhow::Result;
 use turbo_rcstr::RcStr;
-use turbo_tasks::{FxIndexMap, ReadRef, Vc};
+use turbo_tasks::{FxIndexMap, ReadRef, Vc, turbobail};
 use turbo_tasks_fs::FileSystemPath;
 use turbo_tasks_hash::{Xxh3Hash64Hasher, encode_hex};
 use turbopack_core::{

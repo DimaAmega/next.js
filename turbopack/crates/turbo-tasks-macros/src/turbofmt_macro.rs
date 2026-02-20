@@ -138,9 +138,7 @@ pub(crate) fn generate_resolve_stmts(exprs: &[Expr], add_ref: bool) -> Vec<Token
                     let #var = {
                         #[allow(unused_imports)]
                         use turbo_tasks::display::ValueToStringify as _;
-                        #[allow(unused_imports)]
-                        use turbo_tasks::display::DisplayStringify as _;
-                        (&(#expr)).to_stringify().await?
+                        (&&(#expr)).to_stringify().await?
                     };
                 }
             } else {
@@ -148,9 +146,7 @@ pub(crate) fn generate_resolve_stmts(exprs: &[Expr], add_ref: bool) -> Vec<Token
                     let #var = {
                         #[allow(unused_imports)]
                         use turbo_tasks::display::ValueToStringify as _;
-                        #[allow(unused_imports)]
-                        use turbo_tasks::display::DisplayStringify as _;
-                        (#expr).to_stringify().await?
+                        (&(#expr)).to_stringify().await?
                     };
                 }
             }
@@ -183,9 +179,7 @@ fn generate_captured_resolve_stmts(captured_vars: &[String], add_ref: bool) -> V
                     let #ident = {
                         #[allow(unused_imports)]
                         use turbo_tasks::display::ValueToStringify as _;
-                        #[allow(unused_imports)]
-                        use turbo_tasks::display::DisplayStringify as _;
-                        (&#ident).to_stringify().await?
+                        (&&#ident).to_stringify().await?
                     };
                 }
             } else {
@@ -193,9 +187,7 @@ fn generate_captured_resolve_stmts(captured_vars: &[String], add_ref: bool) -> V
                     let #ident = {
                         #[allow(unused_imports)]
                         use turbo_tasks::display::ValueToStringify as _;
-                        #[allow(unused_imports)]
-                        use turbo_tasks::display::DisplayStringify as _;
-                        (#ident).to_stringify().await?
+                        (&#ident).to_stringify().await?
                     };
                 }
             }

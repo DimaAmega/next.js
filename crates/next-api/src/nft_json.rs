@@ -304,14 +304,19 @@ impl Asset for NftJsonAsset {
                     &ident_folder_in_project_fs,
                     &output_root_ref,
                     &project_root_ref,
-                ) {
+                )
+                .await
+                {
                     Ok(specifier) => specifier,
                     Err(err) => {
-                        return Err(err.context(turbofmt!(
-                            "NftJsonAsset: cannot handle filepath '{referenced_chunk_path}' for \
-                             {referenced_chunk:?} it is not under the output_root: \
-                             '{output_root_ref}' or the project_root: '{project_root_ref}'",
-                        ).await?));
+                        return Err(err.context(
+                            turbofmt!(
+                                "NftJsonAsset: cannot handle filepath '{referenced_chunk_path}' \
+                                 for {referenced_chunk:?} it is not under the output_root: \
+                                 '{output_root_ref}' or the project_root: '{project_root_ref}'",
+                            )
+                            .await?,
+                        ));
                     }
                 };
 

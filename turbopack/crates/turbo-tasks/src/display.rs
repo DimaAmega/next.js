@@ -37,7 +37,7 @@ impl ValueToString for RcStr {
 /// effecient macro codegen.
 #[doc(hidden)]
 pub trait ValueToStringify {
-    fn to_stringify(&self) -> impl Future<Output = Result<StringifyType>> + Send;
+    fn to_stringify(self) -> impl Future<Output = Result<StringifyType>> + Send;
 }
 
 /// Used only for macro codegen.
@@ -77,36 +77,21 @@ impl From<StringifyType> for RcStr {
     }
 }
 
-/// Fallback implementation for all `Display` types.
-///
-/// This is implemented for `&T` (not `T`) so that autoref-based method
-/// resolution gives priority to `ValueToStringify` impls on `T` directly.
-/// When calling `(&expr).to_stringify()`:
-///   - `ValueToStringify for T` matches at autoref level 0 (receiver `&T`)
-///   - `DisplayStringify for &T` matches at autoref level 1 (receiver `&&T`)
-///
-/// This means types with `ValueToStringify` impls (Vc, ResolvedVc, ReadRef,
-/// VcValueType+ValueToString types) are preferred over the `Display` fallback.
-#[doc(hidden)]
-pub trait DisplayStringify {
-    fn to_stringify(&self) -> impl Future<Output = Result<StringifyType>> + Send;
-}
-
-impl<T: Display + Send + Sync> DisplayStringify for &T {
+impl<T: Display + Send + Sync> ValueToStringify for &&T {
     #[inline(always)]
-    fn to_stringify(&self) -> impl Future<Output = Result<StringifyType>> + Send {
+    fn to_stringify(self) -> impl Future<Output = Result<StringifyType>> + Send {
         let s = (*self).to_string();
         async move { Ok(StringifyType::String(s)) }
     }
 }
 
 /// Implementation for `Vc<T>` that awaits the turbo-tasks `ValueToString` result.
-impl<T: Send> ValueToStringify for Vc<T>
+impl<T: Send> ValueToStringify for &Vc<T>
 where
     T: ValueToString,
 {
     #[inline(always)]
-    fn to_stringify(&self) -> impl Future<Output = Result<StringifyType>> + Send {
+    fn to_stringify(self) -> impl Future<Output = Result<StringifyType>> + Send {
         let vc = *self;
         async move {
             let s = vc.to_string().await?;
@@ -116,12 +101,12 @@ where
 }
 
 /// Implementation for `ResolvedVc<T>` that delegates to the `Vc<T>` implementation.
-impl<T: Send> ValueToStringify for ResolvedVc<T>
+impl<T: Send> ValueToStringify for &ResolvedVc<T>
 where
     T: ValueToString,
 {
     #[inline(always)]
-    fn to_stringify(&self) -> impl Future<Output = Result<StringifyType>> + Send {
+    fn to_stringify(self) -> impl Future<Output = Result<StringifyType>> + Send {
         let vc = *self;
         async move {
             let s = vc.to_string().await?;
@@ -131,12 +116,12 @@ where
 }
 
 /// Implementation for `ReadRef<T>` that delegates to the `Vc<T>` implementation.
-impl<T: Send> ValueToStringify for ReadRef<T>
+impl<T: Send> ValueToStringify for &ReadRef<T>
 where
     T: ValueToString + VcValueType,
 {
     #[inline(always)]
-    fn to_stringify(&self) -> impl Future<Output = Result<StringifyType>> + Send {
+    fn to_stringify(self) -> impl Future<Output = Result<StringifyType>> + Send {
         async move {
             let s = ReadRef::<T>::cell(self.clone()).to_string().await?;
             Ok(StringifyType::RcStr(s))
