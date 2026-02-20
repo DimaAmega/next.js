@@ -6,7 +6,7 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use turbo_rcstr::RcStr;
 use turbo_tasks::{
-    NonLocalValue, ReadRef, ResolvedVc, TaskInput, ValueToString, Vc, trace::TraceRawVcs,
+    NonLocalValue, ReadRef, ResolvedVc, TaskInput, ValueToString, Vc, trace::TraceRawVcs, turbofmt,
 };
 use turbo_tasks_fs::FileSystemPath;
 use turbo_tasks_hash::{DeterministicHash, Xxh3Hash64Hasher, encode_hex, hash_xxh3_hash64};
@@ -391,7 +391,7 @@ impl ValueToString for AssetIdent {
                     s.push(',');
                 }
 
-                let asset_str = asset.to_string().await?;
+                let asset_str = turbofmt!("{}", *asset).await?;
                 write!(s, " {key} => {asset_str:?}")?;
             }
 

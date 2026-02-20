@@ -1518,10 +1518,9 @@ async fn merge_modules(
     let (merged_ast, inserted) = match result {
         Ok(v) => v,
         Err((content_idx, err)) => {
-            return Err(err.context(format!(
-                "Processing {}",
-                contents[content_idx].0.ident().to_string().await?
-            )));
+            return Err(err.context(
+                turbofmt!("Processing {}", contents[content_idx].0.ident()).await?,
+            ));
         }
     };
 
@@ -1877,12 +1876,11 @@ async fn process_parse_result(
             Ok(match parse_result {
                 ParseResult::Ok { .. } => unreachable!(),
                 ParseResult::Unparsable { messages } => {
-                    let path = ident.path().to_string().await?;
                     let error_messages = messages
                         .as_ref()
                         .and_then(|m| m.first().map(|f| format!("\n{f}")))
                         .unwrap_or("".into());
-                    let msg = format!("Could not parse module '{path}'\n{error_messages}");
+                    let msg = turbofmt!("Could not parse module '{}'\n{error_messages}", ident.path()).await?;
                     let body = vec![
                         quote!(
                             "const e = new Error($msg);" as Stmt,
@@ -1908,8 +1906,7 @@ async fn process_parse_result(
                     }
                 }
                 ParseResult::NotFound => {
-                    let path = ident.path().to_string().await?;
-                    let msg = format!("Could not parse module '{path}', file not found");
+                    let msg = turbofmt!("Could not parse module '{}', file not found", ident.path()).await?;
                     let body = vec![
                         quote!(
                             "const e = new Error($msg);" as Stmt,

@@ -75,15 +75,14 @@ impl EcmascriptBuildNodeEntryChunk {
             if let Some(path) = chunk_directory.get_relative_path_to(&runtime_path) {
                 path
             } else {
-                bail!(
-                    "cannot find a relative path from the chunk ({chunk_path}) to the runtime \
-                     chunk ({runtime_path})",
+                turbobail!(
+                    "cannot find a relative path from the chunk ({chunk_path}) to the runtime chunk ({runtime_path})",
                 );
             };
         let chunk_public_path = if let Some(path) = output_root.get_path_to(&chunk_path) {
             path
         } else {
-            bail!("chunk path ({chunk_path}) is not in output root ({output_root})");
+            turbobail!("chunk path ({chunk_path}) is not in output root ({output_root})");
         };
 
         let mut code = CodeBuilder::default();

@@ -114,6 +114,21 @@ fn wrap_impl(ident: &syn::Ident, is_async: bool, body: TokenStream2) -> TokenStr
                 #body
             }
         }
+
+        /// Auto-generated: allows this type to be used directly in `turbofmt!`/`turbobail!`.
+        impl turbo_tasks::display::ValueToStringify for #ident {
+            #[inline(always)]
+            fn to_stringify(
+                &self,
+            ) -> impl std::future::Future<Output = anyhow::Result<turbo_tasks::display::StringifyType>>
+                   + Send {
+                let vc = turbo_tasks::ValueToString::to_string(self.clone().cell());
+                async move {
+                    let s = vc.await?;
+                    Ok(turbo_tasks::display::StringifyType::RcStr(s))
+                }
+            }
+        }
     }
     .into()
 }

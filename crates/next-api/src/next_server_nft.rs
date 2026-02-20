@@ -289,7 +289,7 @@ impl ServerNftJsonAsset {
                             let glob = if root.path.is_empty() {
                                 glob.to_string()
                             } else {
-                                format!("{root}/{glob}")
+                                format!("{}/{glob}", root.path)
                             };
                             additional_ignores.insert(glob);
                         }

@@ -21,7 +21,7 @@ use turbo_tasks::{
     TryJoinIterExt, ValueToString, Vc,
     debug::ValueDebugFormat,
     graph::{AdjacencyMap, GraphTraversal, Visit, VisitControlFlow},
-    trace::TraceRawVcs,
+    trace::TraceRawVcs, turbofmt,
 };
 use turbo_tasks_fs::FileSystemPath;
 
@@ -1654,7 +1654,7 @@ impl Visit<SingleModuleGraphBuilderNode, RefData> for SingleModuleGraphBuilder<'
             let refs = match refs_cell.await {
                 Ok(refs) => refs,
                 Err(e) => {
-                    return Err(e.context(module.ident().to_string().await?));
+                    return Err(e.context(turbofmt!("{}", module.ident()).await?));
                 }
             };
 

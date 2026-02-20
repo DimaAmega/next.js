@@ -1,4 +1,4 @@
-use anyhow::{Result, bail};
+use anyhow::Result;
 use turbo_rcstr::RcStr;
 use turbo_tasks::{ResolvedVc, ValueToString, Vc, turbobail};
 
@@ -79,12 +79,10 @@ impl AttachedFileSystem {
         let self_fs: ResolvedVc<Box<dyn FileSystem>> = ResolvedVc::upcast(self);
 
         if path.fs != self_fs {
-            let self_fs_str = self_fs.to_string().await?;
-            let path_fs_str = path.fs.to_string().await?;
-            bail!(
+            turbobail!(
                 "path fs does not match (expected {}, got {})",
-                self_fs_str,
-                path_fs_str
+                self_fs,
+                path.fs
             )
         }
 

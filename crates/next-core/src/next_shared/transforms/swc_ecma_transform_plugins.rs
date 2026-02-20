@@ -135,11 +135,9 @@ pub async fn get_swc_ecma_transform_rule_impl(
                 };
 
                 let Some(plugin_source) = &*plugin_module.source().await? else {
-                    use anyhow::bail;
-
-                    bail!(
+                    turbo_tasks::turbobail!(
                         "Expected source for plugin module: {}",
-                        plugin_module.ident().to_string().await?
+                        plugin_module.ident()
                     );
                 };
 

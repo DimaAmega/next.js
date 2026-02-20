@@ -18,7 +18,7 @@ use turbo_frozenmap::{FrozenMap, FrozenSet};
 use turbo_rcstr::{RcStr, rcstr};
 use turbo_tasks::{
     FxIndexMap, FxIndexSet, NonLocalValue, ReadRef, ResolvedVc, TaskInput, TryFlatJoinIterExt,
-    TryJoinIterExt, ValueToString, Vc, trace::TraceRawVcs,
+    TryJoinIterExt, ValueToString, Vc, trace::TraceRawVcs, turbobail,
 };
 use turbo_tasks_fs::{FileSystemEntryType, FileSystemPath};
 use turbo_unix_path::normalize_request;
@@ -582,7 +582,7 @@ impl ValueToString for ResolveResult {
             write!(result, "{request} -> ").unwrap();
             match item {
                 ResolveResultItem::Source(a) => {
-                    result.push_str(&a.ident().to_string().await?);
+                    result.push_str(&turbofmt!("{}", a.ident()).await?);
                 }
                 ResolveResultItem::External {
                     name: s,
@@ -623,7 +623,7 @@ impl ValueToString for ResolveResult {
                 if i > 0 {
                     result.push_str(", ");
                 }
-                result.push_str(&source.ident().to_string().await?);
+                result.push_str(&turbofmt!("{}", source.ident()).await?);
             }
             result.push(')');
         }
@@ -1169,7 +1169,7 @@ async fn realpath(
     }
     match &result.path_result {
         Ok(path) => Ok(path.clone()),
-        Err(e) => bail!(e.as_error_message(fs_path, &result)),
+        Err(e) =>bail!(e.as_error_message(fs_path, &result).await?),
     }
 }
 
@@ -1375,7 +1375,7 @@ async fn find_package(
         if let Some(name) = basepath.get_path_to(package_dir) {
             Ok(name.into())
         } else {
-            bail!("Package directory {package_dir} is not inside the lookup path {basepath}");
+            bail!("Package directory {} is not inside the lookup path {}", package_dir.to_string(), basepath.to_string());
         }
     }
 
@@ -1531,7 +1531,7 @@ pub async fn resolve_raw(
         let result = &*path.realpath_with_links().await?;
         let path = match &result.path_result {
             Ok(path) => path,
-            Err(e) => bail!(e.as_error_message(path, result)),
+            Err(e) =>bail!(e.as_error_message(path, result).await?),
         };
         let request_key = RequestKey::new(request);
         let source = ResolvedVc::upcast(FileSource::new(path.clone()).to_resolved().await?);
@@ -3121,7 +3121,7 @@ async fn resolved(
     let result = &*fs_path.realpath_with_links().await?;
     let path = match &result.path_result {
         Ok(path) => path,
-        Err(e) => bail!(e.as_error_message(&fs_path, result)),
+        Err(e) =>bail!(e.as_error_message(&fs_path, result).await?),
     };
 
     let path_ref = path.clone();

@@ -31,7 +31,7 @@ impl EcmascriptBuildNodeChunkVersion {
         let chunk_path = if let Some(path) = output_root.get_path_to(&chunk_path) {
             path
         } else {
-            bail!("chunk path {chunk_path} is not in client root {output_root}");
+            turbobail!("chunk path {chunk_path} is not in client root {output_root}");
         };
         let chunk_items = content.await?.chunk_item_code_and_ids().await?;
 

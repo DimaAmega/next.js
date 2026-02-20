@@ -5,7 +5,7 @@ use std::fmt::Write;
 
 use anyhow::{Result, bail};
 use turbo_rcstr::{RcStr, rcstr};
-use turbo_tasks::{FxIndexSet, ResolvedVc, TryJoinIterExt, ValueDefault, ValueToString, Vc};
+use turbo_tasks::{FxIndexSet, ResolvedVc, TryJoinIterExt, ValueDefault, ValueToString, Vc, turbofmt};
 use turbo_tasks_fs::{
     File, FileContent, FileSystem, FileSystemPath,
     rope::{Rope, RopeBuilder},
@@ -90,7 +90,7 @@ impl CssChunk {
                 &*this.chunking_context.minify_type().await?,
                 MinifyType::NoMinify
             ) {
-                let id = css_item.asset_ident().to_string().await?;
+                let id = turbofmt!("{}", css_item.asset_ident()).await?;
                 writeln!(body, "/* {id} */")?;
             }
 
@@ -489,7 +489,7 @@ impl Introspectable for CssChunk {
         let chunk_content = this.content.await?;
         details += "Chunk items:\n\n";
         for item in chunk_content.chunk_items.iter() {
-            writeln!(details, "- {}", item.asset_ident().to_string().await?)?;
+            writeln!(details, "- {}", turbofmt!("{}", item.asset_ident()).await?)?;
         }
         details += "\nContent:\n\n";
         write!(details, "{}", content.await?)?;

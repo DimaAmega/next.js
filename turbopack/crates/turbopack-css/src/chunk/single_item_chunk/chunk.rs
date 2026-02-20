@@ -2,7 +2,7 @@ use std::fmt::Write;
 
 use anyhow::Result;
 use turbo_rcstr::{RcStr, rcstr};
-use turbo_tasks::{ResolvedVc, ValueToString, Vc};
+use turbo_tasks::{ResolvedVc, ValueToString, Vc, turbofmt};
 use turbo_tasks_fs::{File, FileContent, FileSystemPath, rope::RopeBuilder};
 use turbopack_core::{
     asset::{Asset, AssetContent},
@@ -60,7 +60,7 @@ impl SingleItemCssChunk {
             &*this.chunking_context.minify_type().await?,
             MinifyType::NoMinify
         ) {
-            let id = this.item.asset_ident().to_string().await?;
+            let id = turbofmt!("{}", this.item.asset_ident()).await?;
             writeln!(code, "/* {id} */")?;
         }
         let content = this.item.content().await?;
@@ -192,7 +192,7 @@ impl Introspectable for SingleItemCssChunk {
         write!(
             details,
             "Chunk item: {}",
-            self.item.asset_ident().to_string().await?
+            turbofmt!("{}", self.item.asset_ident()).await?
         )?;
         Ok(Vc::cell(details.into()))
     }

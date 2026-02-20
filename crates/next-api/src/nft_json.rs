@@ -7,7 +7,7 @@ use turbo_rcstr::{RcStr, rcstr};
 use turbo_tasks::{
     FxIndexMap, ReadRef, ResolvedVc, TryFlatJoinIterExt, TryJoinIterExt, ValueToString, Vc,
     graph::{AdjacencyMap, GraphTraversal, Visit},
-    turbobail,
+    turbobail, turbofmt,
 };
 use turbo_tasks_fs::{
     DirectoryEntry, File, FileContent, FileSystem, FileSystemPath,
@@ -78,7 +78,7 @@ impl OutputAsset for NftJsonAsset {
     }
 }
 
-fn get_output_specifier(
+async fn get_output_specifier(
     path_ref: &FileSystemPath,
     ident_folder: &FileSystemPath,
     ident_folder_in_project_fs: &FileSystemPath,
@@ -97,7 +97,7 @@ fn get_output_specifier(
             .unwrap());
     }
     // This should effectively be unreachable
-    bail!("NftJsonAsset: cannot handle filepath '{path_ref}'");
+    turbobail!("NftJsonAsset: cannot handle filepath '{path_ref}'");
 }
 
 /// Apply outputFileTracingIncludes patterns to find additional files
@@ -203,7 +203,7 @@ impl Asset for NftJsonAsset {
                                         let glob = if root.path.is_empty() {
                                             glob.to_string()
                                         } else {
-                                            format!("{root}/{glob}")
+                                            format!("{}/{glob}", root.path)
                                         };
                                         combined_excludes.insert(glob);
                                     }
@@ -307,12 +307,11 @@ impl Asset for NftJsonAsset {
                 ) {
                     Ok(specifier) => specifier,
                     Err(err) => {
-                        return Err(err.context(format!(
-                            "NftJsonAsset: cannot handle filepath '{chunk_path}' for \
+                        return Err(err.context(turbofmt!(
+                            "NftJsonAsset: cannot handle filepath '{referenced_chunk_path}' for \
                              {referenced_chunk:?} it is not under the output_root: \
                              '{output_root_ref}' or the project_root: '{project_root_ref}'",
-                            chunk_path = referenced_chunk_path.value_to_string().await?
-                        )));
+                        ).await?));
                     }
                 };
 

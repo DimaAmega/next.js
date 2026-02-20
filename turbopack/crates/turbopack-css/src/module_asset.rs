@@ -5,7 +5,7 @@ use indoc::formatdoc;
 use lightningcss::css_modules::CssModuleReference;
 use swc_core::common::{BytePos, FileName, LineCol, SourceMap};
 use turbo_rcstr::{RcStr, rcstr};
-use turbo_tasks::{FxIndexMap, IntoTraitRef, ResolvedVc, ValueToString, Vc};
+use turbo_tasks::{FxIndexMap, IntoTraitRef, ResolvedVc, ValueToString, Vc, turbofmt};
 use turbo_tasks_fs::{FileSystemPath, rope::Rope};
 use turbopack_core::{
     chunk::{AsyncModuleInfo, ChunkableModule, ChunkingContext, ModuleChunkItemIdExt},
@@ -290,12 +290,10 @@ impl EcmascriptChunkPlaceable for ModuleCssAsset {
                                 severity: IssueSeverity::Error,
                                 // TODO(PACK-4879): this should include detailed location information
                                 source: IssueSource::from_source_only(self.await?.source),
-                                message: formatdoc! {
-                                    r#"
-                                        Module {from} referenced in `composes: ... from {from};` can't be resolved.
-                                    "#,
-                                    from = &*from.await?.request.to_string().await?
-                                }.into(),
+                                message: turbofmt!(
+                                    "Module {} referenced in `composes: ... from ...;` can't be resolved.\n",
+                                    from.await?.request
+                                ).await?.into(),
                             }.resolved_cell().emit();
                             continue;
                         };
@@ -307,12 +305,10 @@ impl EcmascriptChunkPlaceable for ModuleCssAsset {
                                 severity: IssueSeverity::Error,
                                 // TODO(PACK-4879): this should include detailed location information
                                 source: IssueSource::from_source_only(self.await?.source),
-                                message: formatdoc! {
-                                    r#"
-                                        Module {from} referenced in `composes: ... from {from};` is not a CSS module.
-                                    "#,
-                                    from = &*from.await?.request.to_string().await?
-                                }.into(),
+                                message: turbofmt!(
+                                    "Module {} referenced in `composes: ... from ...;` is not a CSS module.\n",
+                                    from.await?.request
+                                ).await?.into(),
                             }.resolved_cell().emit();
                             continue;
                         };
@@ -353,7 +349,7 @@ impl EcmascriptChunkPlaceable for ModuleCssAsset {
             // displayed in dev tools.
             source_map: if source_map {
                 Some(generate_minimal_source_map(
-                    self.ident().to_string().await?.to_string(),
+                    turbofmt!("{}", self.ident()).await?.to_string(),
                     code,
                 )?)
             } else {

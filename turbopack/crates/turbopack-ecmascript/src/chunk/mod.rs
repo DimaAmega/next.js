@@ -10,7 +10,7 @@ use std::fmt::Write;
 
 use anyhow::Result;
 use turbo_rcstr::{RcStr, rcstr};
-use turbo_tasks::{ResolvedVc, TryJoinIterExt, ValueToString, Vc};
+use turbo_tasks::{ResolvedVc, TryJoinIterExt, ValueToString, Vc, turbofmt};
 use turbo_tasks_fs::FileSystem;
 use turbopack_core::{
     chunk::{Chunk, ChunkItem, ChunkItems, ChunkingContext, ModuleIds},
@@ -200,7 +200,7 @@ impl Introspectable for EcmascriptChunk {
         let mut details = String::new();
         details += "Chunk items:\n\n";
         for chunk_item in self.content.included_chunk_items().await? {
-            writeln!(details, "- {}", chunk_item.asset_ident().to_string().await?)?;
+            writeln!(details, "- {}", turbofmt!("{}", chunk_item.asset_ident()).await?)?;
         }
         Ok(Vc::cell(details.into()))
     }

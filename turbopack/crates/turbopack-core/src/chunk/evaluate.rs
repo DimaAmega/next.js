@@ -1,5 +1,6 @@
 use anyhow::Result;
-use turbo_tasks::{ResolvedVc, Upcast, Vc, turbobail};
+use turbo_tasks::turbobail;
+use turbo_tasks::{ResolvedVc, Upcast, Vc};
 
 use super::ChunkableModule;
 use crate::{
