@@ -555,26 +555,18 @@ pub fn project_new(
                 });
             }
 
-            #[turbo_tasks::function(operation)]
-            async fn project_new_operation(
-                is_dev: bool,
-                options: ProjectOptions,
-            ) -> Result<Vc<ProjectContainer>> {
-                let project = ProjectContainer::new(rcstr!("next.js"), is_dev)
-                    .to_resolved()
-                    .await?;
-                project.initialize(options).await?;
-                Ok(*project)
-            }
-
             let options = ProjectOptions::from(options);
             let is_dev = options.dev;
             let root_path = options.root_path.clone();
             let container = turbo_tasks
                 .run(async move {
-                    project_new_operation(is_dev, options)
-                        .resolve_strongly_consistent()
-                        .await
+                    #[turbo_tasks::function(operation)]
+                    fn new_operation(is_dev: bool) -> Vc<ProjectContainer> {
+                        ProjectContainer::new(rcstr!("next.js"), is_dev)
+                    }
+                    let container_op = new_operation(is_dev);
+                    ProjectContainer::initialize(container_op, options).await?;
+                    container_op.resolve_strongly_consistent().await
                 })
                 .or_else(|e| turbopack_ctx.throw_turbopack_internal_result(&e.into()))
                 .await?;
