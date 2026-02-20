@@ -12,8 +12,7 @@ use swc_core::{
 };
 use turbo_rcstr::{RcStr, rcstr};
 use turbo_tasks::{
-    FxIndexMap, NonLocalValue, ResolvedVc, TryFlatJoinIterExt, ValueToString, Vc,
-    trace::TraceRawVcs, turbofmt,
+    FxIndexMap, NonLocalValue, ResolvedVc, TryFlatJoinIterExt, Vc, trace::TraceRawVcs, turbofmt,
 };
 use turbopack_core::{
     chunk::{ChunkingContext, ModuleChunkItemIdExt},
