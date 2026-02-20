@@ -460,7 +460,7 @@ impl ChunkingContext for NodeJsChunkingContext {
         if !configs.iter().any(|(ty, _)| *ty == css_type) {
             configs.push((css_type, ChunkingConfig::default()));
         }
-        Ok(ChunkingConfigs(configs.into_iter().collect()).cell())
+        Ok(ChunkingConfigs::new(configs))
     }
 
     #[turbo_tasks::function]

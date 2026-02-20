@@ -656,11 +656,13 @@ pub async fn compute_module_batches(
 
         let mut edges_count = 0;
         let chunking_config = chunking_configs.await?;
+        // Pre-resolve chunk type trait refs to avoid repeated async lookups per module
+        let resolved_chunk_types = chunking_config.resolved_chunk_types().await?;
         let mut chunkable_modules = FxIndexSet::default();
         for prebatch in &pre_batches.batches {
             for item in &prebatch.items {
                 if let PreBatchItem::ParallelModule(module) = item
-                    && chunking_config.is_chunkable(*module).await
+                    && chunking_config.is_chunkable_resolved(&resolved_chunk_types, *module)
                 {
                     chunkable_modules.insert(*module);
                 }

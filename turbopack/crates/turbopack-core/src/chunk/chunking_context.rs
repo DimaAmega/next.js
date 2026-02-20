@@ -6,7 +6,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use serde::{Deserialize, Serialize};
 use turbo_rcstr::RcStr;
 use turbo_tasks::{
-    IntoTraitRef, NonLocalValue, ResolvedVc, TaskInput, Upcast, Vc, trace::TraceRawVcs,
+    IntoTraitRef, NonLocalValue, ResolvedVc, TaskInput, TraitRef, Upcast, Vc, trace::TraceRawVcs,
 };
 use turbo_tasks_fs::FileSystemPath;
 use turbo_tasks_hash::DeterministicHash;
@@ -284,12 +284,28 @@ pub struct ChunkingConfig {
 #[turbo_tasks::value(shared)]
 pub struct ChunkingConfigs(pub FxHashMap<ResolvedVc<Box<dyn ChunkType>>, ChunkingConfig>);
 
+#[turbo_tasks::value_impl]
+impl ChunkingConfigs {
+    /// Create a new `ChunkingConfigs` from a list of chunk type/config pairs.
+    ///
+    /// This is a memoized turbo_tasks function, so identical inputs produce the same `Vc`,
+    /// which is critical for downstream memoization of `module_batches()`.
+    #[turbo_tasks::function]
+    pub fn new(configs: Vec<(ResolvedVc<Box<dyn ChunkType>>, ChunkingConfig)>) -> Vc<Self> {
+        ChunkingConfigs(configs.into_iter().collect()).cell()
+    }
+}
+
 impl Deref for ChunkingConfigs {
     type Target = FxHashMap<ResolvedVc<Box<dyn ChunkType>>, ChunkingConfig>;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
+
+/// Pre-resolved chunk type trait refs for efficient batch chunkability checks.
+/// Created via [`ChunkingConfigs::resolved_chunk_types`].
+pub type ResolvedChunkTypes = Vec<(ResolvedVc<Box<dyn ChunkType>>, TraitRef<Box<dyn ChunkType>>)>;
 
 impl ChunkingConfigs {
     pub async fn is_chunkable(&self, module: ResolvedVc<Box<dyn Module>>) -> bool {
@@ -312,6 +328,32 @@ impl ChunkingConfigs {
             }
         }
         None
+    }
+
+    /// Pre-resolves all chunk type trait refs. Use with [`is_chunkable_resolved`]
+    /// when checking many modules to avoid repeated async lookups.
+    pub async fn resolved_chunk_types(&self) -> Result<ResolvedChunkTypes> {
+        let mut result = Vec::with_capacity(self.0.len());
+        for chunk_type in self.0.keys() {
+            let trait_ref = chunk_type.into_trait_ref().await?;
+            result.push((*chunk_type, trait_ref));
+        }
+        Ok(result)
+    }
+
+    /// Check if a module is chunkable using pre-resolved trait refs.
+    /// More efficient than [`is_chunkable`] when checking many modules.
+    pub fn is_chunkable_resolved(
+        &self,
+        resolved: &ResolvedChunkTypes,
+        module: ResolvedVc<Box<dyn Module>>,
+    ) -> bool {
+        for (_, trait_ref) in resolved {
+            if trait_ref.accepts_module(module) {
+                return true;
+            }
+        }
+        false
     }
 }
 
