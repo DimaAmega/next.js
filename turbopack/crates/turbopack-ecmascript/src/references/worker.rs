@@ -192,8 +192,7 @@ impl ModuleReference for WorkerAssetReference {
                                      type doesn't support bundling.",
                                     module.ident()
                                 )
-                                .await?
-                                .into(),
+                                .await?,
                             )
                             .resolved_cell(),
                             path: self.origin.origin_path().owned().await?,
@@ -222,8 +221,7 @@ impl ModuleReference for WorkerAssetReference {
                                      support direct evaluation.",
                                     module.ident()
                                 )
-                                .await?
-                                .into(),
+                                .await?,
                             )
                             .resolved_cell(),
                             path: self.origin.origin_path().owned().await?,

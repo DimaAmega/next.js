@@ -122,9 +122,7 @@ async fn resolve_symlink_safely(entry: DirectoryEntry) -> Result<DirectoryEntry>
         // match.
         let source_path = entry.path().unwrap();
         if source_path.is_inside_or_equal(&resolved_entry.clone().path().unwrap()) {
-            turbobail!(
-                "'{source_path}' is a symlink causes that causes an infinite loop!",
-            )
+            turbobail!("'{source_path}' is a symlink causes that causes an infinite loop!",)
         }
     }
     Ok(resolved_entry)
@@ -198,8 +196,8 @@ async fn track_glob_internal(
                     }
                     DirectoryEntry::Symlink(symlink_path) => turbobail!(
                         "resolve_symlink_safely() should have resolved all symlinks or returned \
-                         an error, but found unresolved symlink at path: '{entry_path}'. Found path: '{symlink_path}'. \
-                         Please report this as a bug.",
+                         an error, but found unresolved symlink at path: '{entry_path}'. Found \
+                         path: '{symlink_path}'. Please report this as a bug.",
                     ),
                     DirectoryEntry::Other(path) => {
                         if glob_value.matches(&entry_path) {

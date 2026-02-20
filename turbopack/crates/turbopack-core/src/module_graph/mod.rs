@@ -21,7 +21,8 @@ use turbo_tasks::{
     TryJoinIterExt, ValueToString, Vc,
     debug::ValueDebugFormat,
     graph::{AdjacencyMap, GraphTraversal, Visit, VisitControlFlow},
-    trace::TraceRawVcs, turbofmt,
+    trace::TraceRawVcs,
+    turbofmt,
 };
 use turbo_tasks_fs::FileSystemPath;
 

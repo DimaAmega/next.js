@@ -284,9 +284,7 @@ pub async fn parse(
         .await
     {
         Ok(result) => Ok(result),
-        Err(error) => Err(error.context(
-            turbofmt!("failed to parse {}", source.ident()).await?,
-        )),
+        Err(error) => Err(error.context(turbofmt!("failed to parse {}", source.ident()).await?)),
     }
 }
 
@@ -347,7 +345,11 @@ async fn parse_internal(
                             Ok(result) => result,
                             Err(e) => {
                                 return Err(e).context(
-                                    turbofmt!("Transforming and/or parsing of {} failed", source.ident()).await?,
+                                    turbofmt!(
+                                        "Transforming and/or parsing of {} failed",
+                                        source.ident()
+                                    )
+                                    .await?,
                                 );
                             }
                         }

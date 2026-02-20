@@ -121,10 +121,8 @@ where
     T: ValueToString + VcValueType,
 {
     #[inline(always)]
-    fn to_stringify(self) -> impl Future<Output = Result<StringifyType>> + Send {
-        async move {
-            let s = ReadRef::<T>::cell(self.clone()).to_string().await?;
-            Ok(StringifyType::RcStr(s))
-        }
+    async fn to_stringify(self) -> Result<StringifyType> {
+        let s = ReadRef::<T>::cell(self.clone()).to_string().await?;
+        Ok(StringifyType::RcStr(s))
     }
 }

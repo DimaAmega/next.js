@@ -1,11 +1,10 @@
 use std::{fmt::Write, sync::Arc};
 
 use anyhow::{Context, Result};
-use indoc::formatdoc;
 use lightningcss::css_modules::CssModuleReference;
 use swc_core::common::{BytePos, FileName, LineCol, SourceMap};
 use turbo_rcstr::{RcStr, rcstr};
-use turbo_tasks::{FxIndexMap, IntoTraitRef, ResolvedVc, ValueToString, Vc, turbofmt};
+use turbo_tasks::{FxIndexMap, IntoTraitRef, ResolvedVc, Vc, turbofmt};
 use turbo_tasks_fs::{FileSystemPath, rope::Rope};
 use turbopack_core::{
     chunk::{AsyncModuleInfo, ChunkableModule, ChunkingContext, ModuleChunkItemIdExt},
@@ -288,13 +287,18 @@ impl EcmascriptChunkPlaceable for ModuleCssAsset {
                         let Some(resolved_module) = &*resolved_module else {
                             CssModuleComposesIssue {
                                 severity: IssueSeverity::Error,
-                                // TODO(PACK-4879): this should include detailed location information
+                                // TODO(PACK-4879): this should include detailed location
+                                // information
                                 source: IssueSource::from_source_only(self.await?.source),
                                 message: turbofmt!(
-                                    "Module {} referenced in `composes: ... from ...;` can't be resolved.\n",
+                                    "Module {} referenced in `composes: ... from ...;` can't be \
+                                     resolved.\n",
                                     from.await?.request
-                                ).await?.into(),
-                            }.resolved_cell().emit();
+                                )
+                                .await?,
+                            }
+                            .resolved_cell()
+                            .emit();
                             continue;
                         };
 
@@ -303,13 +307,18 @@ impl EcmascriptChunkPlaceable for ModuleCssAsset {
                         else {
                             CssModuleComposesIssue {
                                 severity: IssueSeverity::Error,
-                                // TODO(PACK-4879): this should include detailed location information
+                                // TODO(PACK-4879): this should include detailed location
+                                // information
                                 source: IssueSource::from_source_only(self.await?.source),
                                 message: turbofmt!(
-                                    "Module {} referenced in `composes: ... from ...;` is not a CSS module.\n",
+                                    "Module {} referenced in `composes: ... from ...;` is not a \
+                                     CSS module.\n",
                                     from.await?.request
-                                ).await?.into(),
-                            }.resolved_cell().emit();
+                                )
+                                .await?,
+                            }
+                            .resolved_cell()
+                            .emit();
                             continue;
                         };
 

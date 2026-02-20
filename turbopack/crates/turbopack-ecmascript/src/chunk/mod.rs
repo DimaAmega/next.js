@@ -200,7 +200,11 @@ impl Introspectable for EcmascriptChunk {
         let mut details = String::new();
         details += "Chunk items:\n\n";
         for chunk_item in self.content.included_chunk_items().await? {
-            writeln!(details, "- {}", turbofmt!("{}", chunk_item.asset_ident()).await?)?;
+            writeln!(
+                details,
+                "- {}",
+                turbofmt!("{}", chunk_item.asset_ident()).await?
+            )?;
         }
         Ok(Vc::cell(details.into()))
     }

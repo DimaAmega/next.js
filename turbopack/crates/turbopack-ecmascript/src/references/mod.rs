@@ -533,9 +533,8 @@ pub async fn analyze_ecmascript_module(
 
     match result {
         Ok(result) => Ok(result),
-        Err(err) => Err(err.context(
-            turbofmt!("failed to analyze ecmascript module '{}'", module.ident()).await?,
-        )),
+        Err(err) => Err(err
+            .context(turbofmt!("failed to analyze ecmascript module '{}'", module.ident()).await?)),
     }
 }
 

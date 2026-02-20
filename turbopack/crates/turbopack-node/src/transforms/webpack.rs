@@ -249,7 +249,8 @@ impl WebpackLoadersProcessedAsset {
             let resource_fs_path = resource_fs_path.to_string();
             let project_path = project_path.to_string();
             turbobail!(
-                "Resource path \"{resource_fs_path}\" needs to be on project filesystem \"{project_path}\"",
+                "Resource path \"{resource_fs_path}\" needs to be on project filesystem \
+                 \"{project_path}\"",
             );
         };
         let loaders = transform.loaders.await?;

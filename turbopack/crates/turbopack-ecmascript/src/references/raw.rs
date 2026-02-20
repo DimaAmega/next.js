@@ -1,7 +1,7 @@
 use anyhow::{Result, bail};
 use tracing::Instrument;
 use turbo_rcstr::rcstr;
-use turbo_tasks::{ResolvedVc, ValueToString, Vc, turbobail};
+use turbo_tasks::{ResolvedVc, ValueToString, Vc};
 use turbo_tasks_fs::FileSystemPath;
 use turbopack_core::{
     chunk::{ChunkingType, ChunkingTypeOption},
@@ -164,7 +164,7 @@ async fn resolve_reference_from_dir(
                 }
                 let path: FileSystemPath = match &realpath.path_result {
                     Ok(path) => path.clone(),
-                    Err(e) =>bail!(e.as_error_message(file, &realpath).await?),
+                    Err(e) => bail!(e.as_error_message(file, &realpath).await?),
                 };
                 results.push((
                     RequestKey::new(matched_path.clone()),

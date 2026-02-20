@@ -5,7 +5,9 @@ use std::fmt::Write;
 
 use anyhow::{Result, bail};
 use turbo_rcstr::{RcStr, rcstr};
-use turbo_tasks::{FxIndexSet, ResolvedVc, TryJoinIterExt, ValueDefault, ValueToString, Vc, turbofmt};
+use turbo_tasks::{
+    FxIndexSet, ResolvedVc, TryJoinIterExt, ValueDefault, ValueToString, Vc, turbofmt,
+};
 use turbo_tasks_fs::{
     File, FileContent, FileSystem, FileSystemPath,
     rope::{Rope, RopeBuilder},

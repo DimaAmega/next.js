@@ -4,7 +4,7 @@ use anyhow::{Result, bail};
 use regex::Regex;
 use serde::Deserialize;
 use turbo_rcstr::{RcStr, rcstr};
-use turbo_tasks::{FxIndexMap, ResolvedVc, TryFlatJoinIterExt, TryJoinIterExt, ValueToString, Vc, turbobail};
+use turbo_tasks::{FxIndexMap, ResolvedVc, TryFlatJoinIterExt, TryJoinIterExt, ValueToString, Vc};
 use turbo_tasks_fs::{
     DirectoryContent, DirectoryEntry, FileContent, FileSystemEntryType, FileSystemPath,
     json::parse_json_rope_with_source_context,
@@ -184,7 +184,9 @@ async fn resolve_node_pre_gyp_files(
                             format!("deps/lib/{key}").into(),
                             Vc::upcast(FileSource::new(match &realpath_with_links.path_result {
                                 Ok(path) => path.clone(),
-                                Err(e) => bail!(e.as_error_message(dylib, &realpath_with_links).await?),
+                                Err(e) => {
+                                    bail!(e.as_error_message(dylib, &realpath_with_links).await?)
+                                }
                             })),
                         );
                     }
