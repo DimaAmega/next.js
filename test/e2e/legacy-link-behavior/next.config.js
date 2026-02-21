@@ -3,6 +3,9 @@
  */
 const nextConfig = {
   cacheComponents: true,
+  experimental: {
+    reactDebugChannel: false,
+  },
 }
 
 module.exports = nextConfig
