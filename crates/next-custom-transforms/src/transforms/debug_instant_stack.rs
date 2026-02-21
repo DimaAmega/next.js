@@ -106,7 +106,7 @@ impl VisitMut for DebugInstantStack {
                             } else {
                                 // Local named export: try to find the variable's initializer
                                 let local_name = &orig.sym;
-                                if let Some(init_span) = find_var_init_span(&items, local_name) {
+                                if let Some(init_span) = find_var_init_span(items, local_name) {
                                     self.instant_export_span = Some(init_span);
                                 } else {
                                     // Fallback to the export specifier span
