@@ -1,3 +1,0 @@
-[91;4mbug - [code gen] /turbopack/crates/turbopack-tests/tests/snapshot/css/cycle/input/index.js  non-ecmascript placeable asset
-  
-  asset is not placeable in ESM chunks, so it doesn't have a module id

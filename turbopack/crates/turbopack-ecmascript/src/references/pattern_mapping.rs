@@ -12,7 +12,7 @@ use swc_core::{
 };
 use turbo_rcstr::{RcStr, rcstr};
 use turbo_tasks::{
-    FxIndexMap, NonLocalValue, ResolvedVc, TaskInput, TryJoinIterExt, Vc, debug::ValueDebugFormat,
+    FxIndexMap, NonLocalValue, TaskInput, TryJoinIterExt, Vc, debug::ValueDebugFormat,
     trace::TraceRawVcs,
 };
 use turbopack_core::{
@@ -28,7 +28,6 @@ use turbopack_core::{
 };
 
 use crate::{
-    chunk::EcmascriptChunkPlaceable,
     references::util::{
         request_to_string, throw_module_not_found_error_expr, throw_module_not_found_expr,
         throw_module_not_found_expr_async,
@@ -356,7 +355,13 @@ async fn to_single_pattern_mapping(
             return Ok(SinglePatternMapping::Invalid);
         }
     };
-    if ResolvedVc::try_sidecast::<Box<dyn EcmascriptChunkPlaceable>>(module).is_some() {
+    if chunking_context
+        .chunking_configs()
+        .await?
+        .chunk_type(module)
+        .await
+        .is_some()
+    {
         match resolve_type {
             ResolveType::AsyncChunkLoader => {
                 let ident = chunking_context.async_loader_chunk_item_ident(*module);
@@ -375,9 +380,9 @@ async fn to_single_pattern_mapping(
     }
     CodeGenerationIssue {
         severity: IssueSeverity::Bug,
-        title: StyledString::Text(rcstr!("non-ecmascript placeable asset")).resolved_cell(),
+        title: StyledString::Text(rcstr!("non-chunkable asset")).resolved_cell(),
         message: StyledString::Text(rcstr!(
-            "asset is not placeable in ESM chunks, so it doesn't have a module id"
+            "asset is not chunkable, so it doesn't have a module id"
         ))
         .resolved_cell(),
         path: origin.origin_path().owned().await?,
