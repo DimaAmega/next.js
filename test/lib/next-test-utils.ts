@@ -391,6 +391,7 @@ export interface NextDevOptions {
   bootupMarker?: RegExp
   nextStart?: boolean
   turbo?: boolean
+  disableAutoSkewProtection?: boolean
 
   stderr?: false
   stdout?: false
@@ -546,6 +547,12 @@ export function nextStart(
   port: string | number,
   opts: NextDevOptions = {}
 ) {
+  if (!opts.disableAutoSkewProtection && shouldUseTurbopack() && !opts.env) {
+    opts.env ??= {}
+    opts.env.NEXT_DEPLOYMENT_ID = 'test-dpl-id-1234'
+    opts.env.VERCEL_IMMUTABLE_DEPLOYMENT_ID = 'test-immutable-tkn-7890'
+  }
+
   return runNextCommandDev(
     ['start', '-p', port as string, '--hostname', '::', dir],
     undefined,
@@ -2070,18 +2077,26 @@ export function getDeploymentId(appDir: string) {
     )
   } catch {}
 
+  const deploymentId: string | undefined =
+    requiredServerFiles?.config?.deploymentId
+  const immutableAssetToken: string | undefined =
+    requiredServerFiles?.config?.experimental?.immutableAssetToken
+  const assetToken: string | undefined = immutableAssetToken || deploymentId
+
   return {
-    deploymentId: requiredServerFiles?.config?.deploymentId,
+    deploymentId,
     getDeploymentIdQuery(ampersand = false) {
-      return requiredServerFiles?.config?.deploymentId
-        ? `${ampersand ? '&' : '?'}dpl=${requiredServerFiles?.config.deploymentId}`
+      return deploymentId ? `${ampersand ? '&' : '?'}dpl=${deploymentId}` : ''
+    },
+    immutableAssetToken,
+    getImmutableAssetTokenQuery(ampersand = false) {
+      return immutableAssetToken
+        ? `${ampersand ? '&' : '?'}dpl=${immutableAssetToken}`
         : ''
     },
-    immutableAssetToken: requiredServerFiles?.config?.immutableAssetToken,
-    getImmutableAssetTokenQuery(ampersand = false) {
-      return requiredServerFiles?.config?.immutableAssetToken
-        ? `${ampersand ? '&' : '?'}iat=${requiredServerFiles?.config.immutableAssetToken}`
-        : ''
+    assetToken,
+    getAssetQuery(ampersand = false) {
+      return assetToken ? `${ampersand ? '&' : '?'}dpl=${assetToken}` : ''
     },
   }
 }
