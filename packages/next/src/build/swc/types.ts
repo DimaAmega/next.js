@@ -252,6 +252,7 @@ export type CompilationEvent = {
   typeName: string
   message: string
   severity: string
+  eventJson: string
   eventData: any
 }
 

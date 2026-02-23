@@ -16,7 +16,7 @@ import { PHASE_PRODUCTION_BUILD } from '../../shared/lib/constants'
 import loadConfig from '../../server/config'
 import { hasCustomExportOutput } from '../../export/utils'
 import { Telemetry } from '../../telemetry/storage'
-import { setGlobal } from '../../trace'
+import { setGlobal, trace } from '../../trace'
 import { isCI } from '../../server/ci-info'
 import { backgroundLogCompilationEvents } from '../../shared/lib/turbopack/compilation-events'
 import { getSupportedBrowsers, printBuildErrors } from '../utils'
@@ -137,7 +137,9 @@ export async function turbopackBuild(): Promise<{
       : undefined
   )
   try {
-    backgroundLogCompilationEvents(project)
+    const buildEventsSpan = trace('turbopack-build-events')
+    buildEventsSpan.stop()
+    backgroundLogCompilationEvents(project, { parentSpan: buildEventsSpan })
 
     // Write an empty file in a known location to signal this was built with Turbopack
     await fs.writeFile(path.join(distDir, 'turbopack'), '')

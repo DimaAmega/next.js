@@ -7,6 +7,7 @@ import { isFileSystemCacheEnabledForBuild } from '../../shared/lib/turbopack/uti
 import { createDefineEnv, loadBindings } from '../swc'
 import { isCI } from '../../server/ci-info'
 import { backgroundLogCompilationEvents } from '../../shared/lib/turbopack/compilation-events'
+import { trace } from '../../trace'
 import { getSupportedBrowsers } from '../utils'
 import { normalizePath } from '../../lib/normalize-path'
 import { PHASE_PRODUCTION_BUILD } from '../../shared/lib/constants'
@@ -99,7 +100,9 @@ export async function turbopackAnalyze(
   )
 
   try {
-    backgroundLogCompilationEvents(project)
+    const analyzeEventsSpan = trace('turbopack-analyze-events')
+    analyzeEventsSpan.stop()
+    backgroundLogCompilationEvents(project, { parentSpan: analyzeEventsSpan })
 
     await project.writeAnalyzeData(analyzeContext.appDirOnly)
 

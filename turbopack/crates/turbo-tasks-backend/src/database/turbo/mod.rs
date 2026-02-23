@@ -3,7 +3,7 @@ use std::{
     path::PathBuf,
     sync::Arc,
     thread::available_parallelism,
-    time::{Duration, Instant},
+    time::{Duration, Instant, SystemTime},
 };
 
 use anyhow::{Ok, Result};
@@ -11,7 +11,11 @@ use parking_lot::Mutex;
 use turbo_persistence::{
     ArcSlice, CompactConfig, KeyBase, StoreKey, TurboPersistence, ValueBuffer,
 };
-use turbo_tasks::{JoinHandle, message_queue::TimingEvent, spawn, turbo_tasks};
+use turbo_tasks::{
+    JoinHandle,
+    message_queue::{CompactionEvent, TimingEvent},
+    spawn, turbo_tasks,
+};
 
 use crate::database::{
     key_value_database::{KeySpace, KeyValueDatabase},
@@ -151,6 +155,7 @@ fn do_compact(
     max_merge_segment_count: usize,
 ) -> Result<()> {
     let start = Instant::now();
+    let wall_start = SystemTime::now();
     // Compact the database with the given max merge segment count
     let ran = db.compact(&CompactConfig {
         max_merge_segment_count,
@@ -163,6 +168,17 @@ fn do_compact(
             turbo_tasks()
                 .send_compilation_event(Arc::new(TimingEvent::new(message.to_string(), elapsed)));
         }
+        let wall_start_ms = wall_start
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs_f64()
+            * 1000.0;
+        let duration_ms = elapsed.as_secs_f64() * 1000.0;
+        turbo_tasks().send_compilation_event(Arc::new(CompactionEvent::new(
+            duration_ms,
+            wall_start_ms,
+            wall_start_ms + duration_ms,
+        )));
     }
     Ok(())
 }
