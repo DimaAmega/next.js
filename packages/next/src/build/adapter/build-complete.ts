@@ -1,5 +1,5 @@
 import path from 'path'
-import crypto, { type Hash } from 'crypto'
+import crypto from 'crypto'
 import fs from 'fs/promises'
 import { pathToFileURL } from 'url'
 import * as Log from '../output/log'
@@ -77,25 +77,19 @@ interface SharedRouteFields {
    * runtime is which runtime the entrypoint is built for
    */
   runtime: 'nodejs' | 'edge'
+
   /**
    * assets are all necessary traced assets that could be
    * loaded by the output to handle a request e.g. traced
    * node_modules or necessary manifests for Next.js.
-   * The key is the relative path from the repo root and the value
-   * is the absolute path to the file
+   * The key is the relative path from the repo root
    */
-  assets: Record<string, string>
+  assets: Record<string, FunctionFile>
 
   /**
-   * wasmAssets are bundled wasm files with mapping of name
-   * to filePath on disk
+   * wasmAssets are bundled wasm files. The key is the (opaque) name of asset
    */
-  wasmAssets?: Record<string, string>
-
-  /**
-   * A hash representing all of `assets` and `wasmAssets` (filepaths and contents).
-   */
-  assetsHash?: string
+  wasmAssets?: Record<string, FunctionFile>
 
   /**
    * config related to the route
@@ -119,6 +113,13 @@ interface SharedRouteFields {
      */
     env?: Record<string, string>
   }
+}
+
+export type FunctionFile = {
+  // absolute filepath on disk
+  filePath: string
+  // hash of the file contents to use for cache invalidation
+  contentHash: string
 }
 
 export interface AdapterOutput {
@@ -518,8 +519,8 @@ export async function handleBuildComplete({
       async function handleTraceFiles(
         traceFilePath: string,
         type: 'pages' | 'app' | 'neutral'
-      ): Promise<AssetsBuilder> {
-        const assets = await AssetsBuilder.fromNFT(tracingRoot, traceFilePath)
+      ): Promise<Assets> {
+        const assets = await Assets.fromNFT(tracingRoot, traceFilePath)
 
         assets.extend(sharedNodeAssets)
         if (type === 'pages') assets.extend(pagesSharedNodeAssets)
@@ -593,16 +594,25 @@ export async function handleBuildComplete({
             config.distDir,
             path.join(path.relative(tracingRoot, distDir), file)
           )
-          output.assets[fileOutputPath] = originalPath
+          output.assets[fileOutputPath] = {
+            filePath: originalPath,
+            contentHash: await hashFile(originalPath),
+          }
         }
         for (const item of [...(page.assets || [])]) {
-          output.assets[item.name] = path.join(distDir, item.filePath)
+          output.assets[item.name] = {
+            filePath: path.join(distDir, item.filePath),
+            contentHash: await hashFile(path.join(distDir, item.filePath)),
+          }
         }
         for (const item of page.wasm || []) {
           if (!output.wasmAssets) {
             output.wasmAssets = {}
           }
-          output.wasmAssets[item.name] = path.join(distDir, item.filePath)
+          output.wasmAssets[item.name] = {
+            filePath: path.join(distDir, item.filePath),
+            contentHash: await hashFile(path.join(distDir, item.filePath)),
+          }
         }
 
         if (type === AdapterOutputType.MIDDLEWARE) {
@@ -740,20 +750,16 @@ export async function handleBuildComplete({
         }
 
         const pageTraceFile = `${pageFile}.nft.json`
-        const { assets, assetsHash } = await handleTraceFiles(
-          pageTraceFile,
-          'pages'
-        )
-          .then((builder) => builder.finish())
-          .catch((err) => {
+        const { assets } = await handleTraceFiles(pageTraceFile, 'pages').catch(
+          (err) => {
             if (err.code !== 'ENOENT' || (page !== '/404' && page !== '/500')) {
               Log.warn(`Failed to locate traced assets for ${pageFile}`, err)
             }
             return {
               assets: {},
-              assetsHash: undefined,
             }
-          })
+          }
+        )
         const functionConfig = functionsConfigManifest.functions[route] || {}
         let sourcePage = route.replace(/^\//, '')
 
@@ -768,7 +774,6 @@ export async function handleBuildComplete({
           pathname: route,
           sourcePage,
           assets,
-          assetsHash,
           runtime: 'nodejs',
           config: {
             maxDuration: functionConfig.maxDuration,
@@ -844,9 +849,7 @@ export async function handleBuildComplete({
       if (hasNodeMiddleware) {
         const middlewareFile = path.join(distDir, 'server', 'middleware.js')
         const middlewareTrace = `${middlewareFile}.nft.json`
-        const { assets, assetsHash } = (
-          await handleTraceFiles(middlewareTrace, 'neutral')
-        ).finish()
+        const { assets } = await handleTraceFiles(middlewareTrace, 'neutral')
         const functionConfig =
           functionsConfigManifest.functions['/_middleware'] || {}
 
@@ -855,7 +858,6 @@ export async function handleBuildComplete({
           id: '/_middleware',
           sourcePage: 'middleware',
           assets,
-          assetsHash,
           type: AdapterOutputType.MIDDLEWARE,
           runtime: 'nodejs',
           filePath: middlewareFile,
@@ -899,34 +901,26 @@ export async function handleBuildComplete({
           }
           const pageFile = path.join(appDistDir, `${page}.js`)
           const pageTraceFile = `${pageFile}.nft.json`
-          let assetsBuilder = await handleTraceFiles(
-            pageTraceFile,
-            'app'
-          ).catch((err) => {
-            Log.warn(`Failed to copy traced files for ${pageFile}`, err)
-            return new AssetsBuilder()
-          })
+          let assets = await handleTraceFiles(pageTraceFile, 'app').catch(
+            (err) => {
+              Log.warn(`Failed to copy traced files for ${pageFile}`, err)
+              return new Assets()
+            }
+          )
 
           // If this is a parallel route we just need to merge
           // the assets as they share the same pathname
           const existingOutput = appOutputMap[normalizedPage]
           if (existingOutput) {
-            let existingAssets = AssetsBuilder.fromRawParts(
-              existingOutput.assets,
-              existingOutput.assetsHash
-            )
-            existingAssets.extend(assetsBuilder)
+            let existingAssets = Assets.fromRawParts(existingOutput.assets)
+            existingAssets.extend(assets)
             await existingAssets.pushAsset(
               path.relative(tracingRoot, pageFile),
               pageFile
             )
-            const { assets, assetsHash } = existingAssets.finish()
-            existingOutput.assets = assets
-            existingOutput.assetsHash = assetsHash
+            existingOutput.assets = existingAssets.assets
             continue
           }
-
-          const { assets, assetsHash } = assetsBuilder.finish()
 
           const functionConfig =
             functionsConfigManifest.functions[normalizedPage] || {}
@@ -936,8 +930,7 @@ export async function handleBuildComplete({
               pathname: normalizedPage,
               id: normalizedPage,
               sourcePage: page,
-              assets,
-              assetsHash,
+              assets: assets.assets,
               type: page.endsWith('/route')
                 ? AdapterOutputType.APP_ROUTE
                 : AdapterOutputType.APP_PAGE,
@@ -1992,13 +1985,13 @@ async function getSharedNodeAssets({
   requiredServerFiles: string[]
   hasInstrumentationHook: boolean
 }): Promise<{
-  sharedNodeAssets: AssetsBuilder
-  pagesSharedNodeAssets: AssetsBuilder
-  appPagesSharedNodeAssets: AssetsBuilder
+  sharedNodeAssets: Assets
+  pagesSharedNodeAssets: Assets
+  appPagesSharedNodeAssets: Assets
 }> {
-  const sharedNodeAssets = new AssetsBuilder()
-  const pagesSharedNodeAssets = new AssetsBuilder()
-  const appPagesSharedNodeAssets = new AssetsBuilder()
+  const sharedNodeAssets = new Assets()
+  const pagesSharedNodeAssets = new Assets()
+  const appPagesSharedNodeAssets = new Assets()
 
   for (const file of requiredServerFiles) {
     // add to shared node assets
@@ -2126,85 +2119,57 @@ async function getSharedNodeAssets({
 /**
  * This interface ensures that no asset is ever added without also updating the hash
  */
-class AssetsBuilder {
-  #assets: Record<string, string>
-  #hasher: Hash
-  // digest has been called already, this builder is now frozen and should not be extended anymore
-  #digest: string | undefined
+class Assets {
+  assets: Record<string, FunctionFile>
 
   constructor() {
-    this.#assets = {}
-    this.#hasher = crypto.createHash('sha1')
+    this.assets = {}
   }
 
   static async fromNFT(tracingRoot: string, traceFilePath: string) {
-    let builder = new AssetsBuilder()
+    let builder = new Assets()
     await builder.extendWithNFT(tracingRoot, traceFilePath)
     return builder
   }
 
-  static fromRawParts(assets: Record<string, string>, hash?: string) {
-    let builder = new AssetsBuilder()
-    builder.#assets = assets
-    if (hash) {
-      builder.#hasher.update(hash)
-    }
+  static fromRawParts(assets: Record<string, FunctionFile>) {
+    let builder = new Assets()
+    builder.assets = assets
     return builder
   }
 
-  #assertNotFrozen() {
-    if (this.#digest) {
-      throw new Error(
-        'Cannot extend an AssetsBuilder that has already been finalized with digest()'
-      )
-    }
-  }
-
-  extend(other: AssetsBuilder) {
-    this.#assertNotFrozen()
-    Object.assign(this.#assets, other.#assets)
-    if (other.#digest == null) {
-      other.#digest = other.#hasher.digest('hex')
-    }
-    this.#hasher.update(other.#digest)
+  extend(other: Assets) {
+    Object.assign(this.assets, other.assets)
   }
 
   async extendWithNFT(tracingRoot: string, traceFilePath: string) {
-    this.#assertNotFrozen()
-
-    const { files, hash } = (await JSON.parse(
+    const { files } = (await JSON.parse(
       await fs.readFile(traceFilePath, 'utf8')
     )) as {
-      files: string[]
-      hash?: string
+      files: Record<string, string>
     }
 
     const traceFileDir = path.dirname(traceFilePath)
-    for (const relativeFile of files) {
+    for (const [relativeFile, contentHash] of Object.entries(files)) {
       const tracedFilePath = path.join(traceFileDir, relativeFile)
       const fileOutputPath = path.relative(tracingRoot, tracedFilePath)
-      this.#assets[fileOutputPath] = tracedFilePath
-    }
-    if (hash != null) {
-      this.#hasher.update(hash)
+      this.assets[fileOutputPath] = { filePath: tracedFilePath, contentHash }
     }
   }
 
   async pushAsset(targetFilePath: string, sourceFilePath: string) {
-    this.#assertNotFrozen()
-
-    if (!(targetFilePath in this.#assets)) {
-      Log.trace('pushAsset individual: ' + targetFilePath)
-      this.#hasher.update(`${targetFilePath}:`)
-      this.#hasher.update(await fs.readFile(sourceFilePath))
-      this.#hasher.update(',')
+    if (!(targetFilePath in this.assets)) {
+      this.assets[targetFilePath] = {
+        filePath: sourceFilePath,
+        contentHash: await hashFile(sourceFilePath),
+      }
     }
   }
+}
 
-  finish() {
-    return {
-      assets: this.#assets,
-      assetsHash: this.#digest ?? this.#hasher.digest('hex'),
-    }
-  }
+async function hashFile(filePath: string): Promise<string> {
+  return crypto
+    .createHash('sha256')
+    .update(await fs.readFile(filePath))
+    .digest('hex')
 }
