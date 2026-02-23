@@ -952,10 +952,13 @@ impl<S: ParallelScheduler, const FAMILIES: usize> TurboPersistence<S, FAMILIES> 
                             .into_iter()
                             .filter(|amqf| !amqf.is_empty())
                             .collect();
-                        let total_len: u64 = filters.iter().map(|f| f.len()).sum();
-                        if total_len == 0 {
+                        if filters.is_empty() {
                             None
+                        } else if filters.len() == 1 {
+                            // Just directly use the single item
+                            filters.into_iter().next()
                         } else {
+                            let total_len: u64 = filters.iter().map(|f| f.len()).sum();
                             let mut merged =
                                 qfilter::Filter::with_fingerprint_size(total_len, u64::BITS as u8)
                                     .expect("Failed to create merged AMQF filter");
@@ -1082,6 +1085,22 @@ impl<S: ParallelScheduler, const FAMILIES: usize> TurboPersistence<S, FAMILIES> 
                                     new_sst_files:
                                         Vec<(u32, File, StaticSortedFileBuilderMeta<'static>)>,
                                 }
+                                impl Collector {
+                                    fn is_full(&self) -> bool {
+                                        self.total_key_size + self.total_value_size
+                                            > DATA_THRESHOLD_PER_COMPACTED_FILE
+                                            || self.entries.len() >= MAX_ENTRIES_PER_COMPACTED_FILE
+                                            || self.value_block_tracker.is_full()
+                                    }
+
+                                    fn is_half_full(&self) -> bool {
+                                        self.total_key_size + self.total_value_size
+                                            > DATA_THRESHOLD_PER_COMPACTED_FILE / 2
+                                            || self.entries.len()
+                                                >= MAX_ENTRIES_PER_COMPACTED_FILE / 2
+                                            || self.value_block_tracker.is_half_full()
+                                    }
+                                }
                                 let mut used_collector = Collector::default();
                                 let mut unused_collector = Collector::default();
                                 for entry in iter {
@@ -1110,12 +1129,7 @@ impl<S: ParallelScheduler, const FAMILIES: usize> TurboPersistence<S, FAMILIES> 
                                                 .value_block_tracker
                                                 .track(is_medium, small_size);
 
-                                            if collector.total_key_size + collector.total_value_size
-                                                > DATA_THRESHOLD_PER_COMPACTED_FILE
-                                                || collector.entries.len()
-                                                    >= MAX_ENTRIES_PER_COMPACTED_FILE
-                                                || collector.value_block_tracker.is_full()
-                                            {
+                                            if collector.is_full() {
                                                 let selected_total_key_size =
                                                     collector.last_entries_total_key_size;
                                                 swap(
@@ -1159,12 +1173,7 @@ impl<S: ParallelScheduler, const FAMILIES: usize> TurboPersistence<S, FAMILIES> 
                                             // undersized, so flush last_entries to
                                             // reduce peak memory.
                                             if !collector.last_entries.is_empty()
-                                                && (collector.total_key_size
-                                                    + collector.total_value_size
-                                                    > DATA_THRESHOLD_PER_COMPACTED_FILE / 2
-                                                    || collector.entries.len()
-                                                        >= MAX_ENTRIES_PER_COMPACTED_FILE / 2
-                                                    || collector.value_block_tracker.is_half_full())
+                                                && collector.is_half_full()
                                             {
                                                 let seq = sequence_number
                                                     .fetch_add(1, Ordering::SeqCst)

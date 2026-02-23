@@ -83,7 +83,19 @@ trait ValueBlockCache {
 
 impl ValueBlockCache for &BlockCache {
     fn get_or_read(self, sst: &StaticSortedFile, block_index: u16) -> Result<ArcBytes> {
-        sst.get_value_block(block_index, self)
+        let this = &sst;
+        let block = match self.get_value_or_guard(&(this.meta.sequence_number, block_index), None) {
+            GuardResult::Value(block) => block,
+            GuardResult::Guard(guard) => {
+                let block = this.read_small_value_block(block_index)?;
+                if !block.is_mmap_backed() {
+                    let _ = guard.insert(block.clone());
+                }
+                block
+            }
+            GuardResult::Timeout => unreachable!(),
+        };
+        Ok(block)
     }
 }
 
