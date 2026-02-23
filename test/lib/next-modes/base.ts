@@ -653,11 +653,13 @@ export class NextInstance {
     return undefined
   }
 
+  public get assetToken(): string | undefined {
+    return this.immutableAssetToken || this.deploymentId
+  }
+
   public getAssetQuery(ampersand: boolean = false): string | undefined {
     const prefix = ampersand ? '&' : '?'
-    return this.immutableAssetToken || this.deploymentId
-      ? `${prefix}dpl=${this.immutableAssetToken || this.deploymentId}`
-      : ''
+    return this.assetToken ? `${prefix}dpl=${this.assetToken}` : ''
   }
 
   public get cliOutput(): string {
