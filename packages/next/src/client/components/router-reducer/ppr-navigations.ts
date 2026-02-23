@@ -1550,9 +1550,9 @@ async function fetchMissingDynamicData(
       await waitForNavigationLock()
     }
 
-    if (routeCacheEntry !== null && result.staticStageResponse !== null) {
+    if (routeCacheEntry !== null && result.staticStageData !== null) {
       writeStaticStageResponseIntoCache(
-        result.staticStageResponse,
+        result.staticStageData,
         result.responseHeaders,
         routeCacheEntry
       )

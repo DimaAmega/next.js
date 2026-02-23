@@ -373,7 +373,7 @@ async function navigateToUnknownRoute(
     renderedSearch,
     couldBeIntercepted,
     prerendered,
-    staticStageResponse,
+    staticStageData,
     responseHeaders,
     debugInfo,
   } = result
@@ -409,9 +409,9 @@ async function navigateToUnknownRoute(
 
     // Write the static stage of the response into the segment cache so
     // that subsequent navigations can serve cached static segments instantly.
-    if (staticStageResponse !== null) {
+    if (staticStageData !== null) {
       writeStaticStageResponseIntoCache(
-        staticStageResponse,
+        staticStageData,
         responseHeaders,
         fulfilledRoute
       )
