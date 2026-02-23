@@ -1,8 +1,8 @@
 /* [project]/turbopack/crates/turbopack-tests/tests/snapshot/css/embed-url/input/style.css [test] (css) */
 .style {
-  cursor: url("../static/image.0ccdd6e3.png");
-  background-image: url("../static/image.0ccdd6e3.png");
-  list-style-image: url("../static/image.0ccdd6e3.png");
+  cursor: url("../static/image.7bbaf41b.png");
+  background-image: url("../static/image.7bbaf41b.png");
+  list-style-image: url("../static/image.7bbaf41b.png");
 }
 
 .style-unresolveable {
