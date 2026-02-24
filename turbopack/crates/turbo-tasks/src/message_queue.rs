@@ -236,44 +236,36 @@ impl CompilationEvent for DiagnosticEvent {
     }
 }
 
+/// A generic trace event that carries a name, wall-clock timing, and arbitrary attributes.
+/// Forwarded as a `CompilationEvent` to the JS side for inclusion in `.next/trace`.
 #[derive(Debug, Clone, Serialize)]
-pub struct PersistenceEvent {
-    pub reason: String,
-    pub duration_ms: f64,
-    pub snapshot_duration_ms: f64,
-    pub persist_duration_ms: f64,
-    pub task_count: usize,
-    /// Epoch milliseconds for the start of the persistence operation
+#[serde(rename_all = "camelCase")]
+pub struct TraceEvent {
+    pub name: &'static str,
     pub start_time_ms: f64,
-    /// Epoch milliseconds for the end of the persistence operation
     pub end_time_ms: f64,
+    pub attributes: Vec<(&'static str, serde_json::Value)>,
 }
 
-impl PersistenceEvent {
+impl TraceEvent {
     pub fn new(
-        reason: String,
-        duration_ms: f64,
-        snapshot_duration_ms: f64,
-        persist_duration_ms: f64,
-        task_count: usize,
+        name: &'static str,
         start_time_ms: f64,
         end_time_ms: f64,
+        attributes: Vec<(&'static str, serde_json::Value)>,
     ) -> Self {
         Self {
-            reason,
-            duration_ms,
-            snapshot_duration_ms,
-            persist_duration_ms,
-            task_count,
+            name,
             start_time_ms,
             end_time_ms,
+            attributes,
         }
     }
 }
 
-impl CompilationEvent for PersistenceEvent {
+impl CompilationEvent for TraceEvent {
     fn type_name(&self) -> &'static str {
-        "PersistenceEvent"
+        "TraceEvent"
     }
 
     fn severity(&self) -> Severity {
@@ -281,51 +273,8 @@ impl CompilationEvent for PersistenceEvent {
     }
 
     fn message(&self) -> String {
-        format!(
-            "Persisted cache ({}) in {:.0}ms (snapshot: {:.0}ms, persist: {:.0}ms, {} tasks)",
-            self.reason,
-            self.duration_ms,
-            self.snapshot_duration_ms,
-            self.persist_duration_ms,
-            self.task_count,
-        )
-    }
-
-    fn to_json(&self) -> String {
-        serde_json::to_string(self).unwrap()
-    }
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct CompactionEvent {
-    pub duration_ms: f64,
-    /// Epoch milliseconds for the start of the compaction operation
-    pub start_time_ms: f64,
-    /// Epoch milliseconds for the end of the compaction operation
-    pub end_time_ms: f64,
-}
-
-impl CompactionEvent {
-    pub fn new(duration_ms: f64, start_time_ms: f64, end_time_ms: f64) -> Self {
-        Self {
-            duration_ms,
-            start_time_ms,
-            end_time_ms,
-        }
-    }
-}
-
-impl CompilationEvent for CompactionEvent {
-    fn type_name(&self) -> &'static str {
-        "CompactionEvent"
-    }
-
-    fn severity(&self) -> Severity {
-        Severity::Event
-    }
-
-    fn message(&self) -> String {
-        format!("Compacted cache database in {:.0}ms", self.duration_ms,)
+        let duration_ms = self.end_time_ms - self.start_time_ms;
+        format!("{} in {:.0}ms", self.name, duration_ms)
     }
 
     fn to_json(&self) -> String {

@@ -13,8 +13,8 @@ function msToNs(ms: number): bigint {
  * Subscribes to compilation events for `project` and prints them using the
  * `Log` library.
  *
- * When `parentSpan` is provided, `PersistenceEvent` and `CompactionEvent`
- * events are also recorded as trace spans in the `.next/trace` file.
+ * When `parentSpan` is provided, `TraceEvent` compilation events are recorded
+ * as trace spans in the `.next/trace` file.
  *
  * The `signal` argument is partially implemented. The abort may not happen until the next
  * compilation event arrives.
@@ -33,38 +33,18 @@ export function backgroundLogCompilationEvents(
         return
       }
 
-      // Record persistence and compaction events as trace spans
-      if (parentSpan && event.eventJson) {
-        if (event.typeName === 'PersistenceEvent') {
-          try {
-            const data = JSON.parse(event.eventJson)
-            parentSpan.manualTraceChild(
-              'turbopack-persistence',
-              msToNs(data.start_time_ms),
-              msToNs(data.end_time_ms),
-              {
-                reason: data.reason,
-                snapshotDurationMs: data.snapshot_duration_ms,
-                persistDurationMs: data.persist_duration_ms,
-                taskCount: data.task_count,
-              }
-            )
-            traceMemoryUsage('turbopack-persistence', parentSpan)
-          } catch {}
-        } else if (event.typeName === 'CompactionEvent') {
-          try {
-            const data = JSON.parse(event.eventJson)
-            parentSpan.manualTraceChild(
-              'turbopack-compaction',
-              msToNs(data.start_time_ms),
-              msToNs(data.end_time_ms),
-              {
-                durationMs: data.duration_ms,
-              }
-            )
-            traceMemoryUsage('turbopack-compaction', parentSpan)
-          } catch {}
-        }
+      // Record TraceEvent compilation events as trace spans in .next/trace.
+      if (parentSpan && event.typeName === 'TraceEvent' && event.eventJson) {
+        try {
+          const data = JSON.parse(event.eventJson)
+          parentSpan.manualTraceChild(
+            data.name,
+            msToNs(data.startTimeMs),
+            msToNs(data.endTimeMs),
+            Object.fromEntries(data.attributes ?? [])
+          )
+          traceMemoryUsage(data.name, parentSpan)
+        } catch {}
       }
 
       switch (event.severity) {

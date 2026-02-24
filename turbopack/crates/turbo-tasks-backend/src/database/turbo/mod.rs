@@ -13,7 +13,7 @@ use turbo_persistence::{
 };
 use turbo_tasks::{
     JoinHandle,
-    message_queue::{CompactionEvent, TimingEvent},
+    message_queue::{TimingEvent, TraceEvent},
     spawn, turbo_tasks,
 };
 
@@ -173,11 +173,12 @@ fn do_compact(
             .unwrap_or_default()
             .as_secs_f64()
             * 1000.0;
-        let duration_ms = elapsed.as_secs_f64() * 1000.0;
-        turbo_tasks().send_compilation_event(Arc::new(CompactionEvent::new(
-            duration_ms,
+        let wall_end_ms = wall_start_ms + elapsed.as_secs_f64() * 1000.0;
+        turbo_tasks().send_compilation_event(Arc::new(TraceEvent::new(
+            "turbopack-compaction",
             wall_start_ms,
-            wall_start_ms + duration_ms,
+            wall_end_ms,
+            vec![],
         )));
     }
     Ok(())

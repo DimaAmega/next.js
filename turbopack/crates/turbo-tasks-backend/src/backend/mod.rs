@@ -37,7 +37,7 @@ use turbo_tasks::{
         VerificationMode,
     },
     event::{Event, EventDescription, EventListener},
-    message_queue::{PersistenceEvent, TimingEvent},
+    message_queue::{TimingEvent, TraceEvent},
     registry::get_value_type,
     scope::scope_and_block,
     task_statistics::TaskStatisticsApi,
@@ -1405,14 +1405,22 @@ impl<B: BackingStorage> TurboTasksBackendInner<B> {
             .as_secs_f64()
             * 1000.0;
         let wall_end_ms = wall_start_ms + elapsed.as_secs_f64() * 1000.0;
-        turbo_tasks.send_compilation_event(Arc::new(PersistenceEvent::new(
-            reason.to_string(),
-            elapsed.as_secs_f64() * 1000.0,
-            snapshot_duration.as_secs_f64() * 1000.0,
-            persist_duration.as_secs_f64() * 1000.0,
-            task_count,
+        turbo_tasks.send_compilation_event(Arc::new(TraceEvent::new(
+            "turbopack-persistence",
             wall_start_ms,
             wall_end_ms,
+            vec![
+                ("reason", serde_json::Value::from(reason)),
+                (
+                    "snapshot_duration_ms",
+                    serde_json::Value::from(snapshot_duration.as_secs_f64() * 1000.0),
+                ),
+                (
+                    "persist_duration_ms",
+                    serde_json::Value::from(persist_duration.as_secs_f64() * 1000.0),
+                ),
+                ("task_count", serde_json::Value::from(task_count)),
+            ],
         )));
 
         Some((snapshot_time, true))

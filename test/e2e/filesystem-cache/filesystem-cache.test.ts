@@ -453,9 +453,9 @@ for (const cacheEnabled of [false, true]) {
           expect(event.tags).toBeDefined()
           const tags = event.tags as Record<string, unknown>
           expect(tags.reason).toBeDefined()
-          expect(typeof tags.snapshotDurationMs).toBe('number')
-          expect(typeof tags.persistDurationMs).toBe('number')
-          expect(typeof tags.taskCount).toBe('number')
+          expect(typeof tags.snapshot_duration_ms).toBe('number')
+          expect(typeof tags.persist_duration_ms).toBe('number')
+          expect(typeof tags.task_count).toBe('number')
         }
       )
     }
