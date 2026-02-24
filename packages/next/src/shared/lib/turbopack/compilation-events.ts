@@ -1,6 +1,7 @@
 import type { Project } from '../../../build/swc/types'
 import * as Log from '../../../build/output/log'
 import type { Span } from '../../../trace'
+import { traceMemoryUsage } from '../../../lib/memory/trace'
 
 const MILLISECONDS_IN_NANOSECOND = BigInt(1_000_000)
 
@@ -48,6 +49,7 @@ export function backgroundLogCompilationEvents(
                 taskCount: data.task_count,
               }
             )
+            traceMemoryUsage('turbopack-persistence', parentSpan)
           } catch {}
         } else if (event.typeName === 'CompactionEvent') {
           try {
@@ -60,6 +62,7 @@ export function backgroundLogCompilationEvents(
                 durationMs: data.duration_ms,
               }
             )
+            traceMemoryUsage('turbopack-compaction', parentSpan)
           } catch {}
         }
       }
