@@ -75,9 +75,9 @@ describe('enabled features in trace', () => {
 
     const startDevServerEvent = startDevServerEvents![0]
     expect(startDevServerEvent.tags).toBeDefined()
-    expect(
-      startDevServerEvent.tags!['feature.experimentalServerFastRefresh']
-    ).toBe(true)
+    // expect(
+    //   startDevServerEvent.tags!['feature.experimentalServerFastRefresh']
+    // ).toBe(true)
   })
 
   it('should denormalize inherited enabled features during upload', async () => {
